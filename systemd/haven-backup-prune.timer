@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Haven Backup retention pruning weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Haven Backup - apply retention policy and garbage-collect
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/haven-backup/.venv/bin/haven-backup prune
+
+[Install]
+WantedBy=multi-user.target

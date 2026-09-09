@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "haven-backup"
+version = "0.1.0"
+description = "Encrypted, deduplicated backups for servers and workstations, over local disk or SFTP."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "cryptography>=42.0",
+    "paramiko>=3.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+haven-backup = "haven_backup.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["haven_backup", "haven_backup.*"]
