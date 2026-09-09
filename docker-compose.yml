@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - haven_data:/data
+    environment:
+      # HAVEN_NOTIFICATION_WEBHOOK_URL: https://ntfy.sh/your-topic
+      # HAVEN_STATUS_REFRESH_MINUTES: "30"
+      # HAVEN_PRUNE_INTERVAL_HOURS: "24"
+      HAVEN_DATA_DIR: /data
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  haven_data:

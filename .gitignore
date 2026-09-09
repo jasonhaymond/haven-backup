@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -6,14 +7,17 @@ build/
 dist/
 .venv/
 venv/
-_old_agent_deprecated/
 
-# Never commit local backup state, keys, config, or repo data.
-/data/
-/metadata/
-/snapshots/
-/staging/
-/restored_files/
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Portal runtime data -- never commit secrets, SSH keys, or the sqlite DB.
+backend/data/
+*.db
 *.key
 *.key.salt
-config.json
+
+# Misc
+_old_agent_deprecated/
+.smoke_data*/
