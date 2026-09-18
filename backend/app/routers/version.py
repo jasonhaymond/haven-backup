@@ -20,12 +20,19 @@ router = APIRouter(prefix="/api/version", tags=["version"], dependencies=[Depend
 logger = logging.getLogger("haven_backup.version")
 
 _CACHE_TTL_SECONDS = 3600
-_cache = {"checked_at": 0.0, "latest": None}
+# time.monotonic()'s reference point is undefined by the stdlib -- on a freshly
+# booted/started process (e.g. right after a container starts, or on a
+# just-provisioned CI runner) it can legitimately read well under
+# _CACHE_TTL_SECONDS. Using 0.0 as "never checked" would then read as "checked
+# recently" and wrongly serve a cache hit before the first real check ever ran.
+# -inf is unconditionally "expired" regardless of what the clock happens to read.
+_NEVER_CHECKED = float("-inf")
+_cache = {"checked_at": _NEVER_CHECKED, "latest": None}
 
 
 def reset_cache():
     """Test-only: the update-check result is cached at module level."""
-    _cache["checked_at"] = 0.0
+    _cache["checked_at"] = _NEVER_CHECKED
     _cache["latest"] = None
 
 

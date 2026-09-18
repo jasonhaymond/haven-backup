@@ -45,19 +45,36 @@ def test_fetch_latest_tag_picks_highest_semver(monkeypatch):
     assert version_router._fetch_latest_tag() == "v0.3.0"
 
 
-def test_fetch_latest_tag_degrades_to_cached_value_on_network_failure():
+def test_fetch_latest_tag_degrades_to_cached_value_on_network_failure(monkeypatch):
+    # Seed a prior successful result, but force the cache to be treated as
+    # expired so the (failing) call actually happens rather than short-circuiting.
     version_router._cache["latest"] = "v0.2.0"
-    version_router._cache["checked_at"] = 0.0  # force a re-check, which will fail
+    version_router._cache["checked_at"] = version_router._NEVER_CHECKED
 
     def _boom(*a, **k):
         raise httpx.ConnectError("no network")
 
-    import app.routers.version as v
-    v.httpx.get = _boom
-    try:
-        assert version_router._fetch_latest_tag() == "v0.2.0"  # last-known-good, not None
-    finally:
-        v.httpx.get = httpx.get
+    monkeypatch.setattr(version_router.httpx, "get", _boom)
+
+    assert version_router._fetch_latest_tag() == "v0.2.0"  # last-known-good, not None
+
+
+def test_reset_cache_forces_a_miss_even_on_a_freshly_booted_clock(monkeypatch):
+    """Regression test: time.monotonic()'s reference point is undefined -- on a
+    just-started process it can read a small number. reset_cache() previously used
+    0.0 as its "never checked" sentinel, which then read as "checked very recently"
+    whenever the clock itself was under _CACHE_TTL_SECONDS, wrongly serving a cache
+    hit before any real check had run. Caught this failing deterministically in CI
+    (young runner, small monotonic clock) while passing locally (long-uptime dev
+    machine) -- simulate the young-clock case explicitly so it can't regress unnoticed."""
+    monkeypatch.setattr(version_router.time, "monotonic", lambda: 10.0)  # "process started 10s ago"
+    version_router.reset_cache()
+    monkeypatch.setattr(
+        version_router.httpx, "get",
+        lambda *a, **k: _FakeResponse([{"name": "v0.3.0"}]),
+    )
+
+    assert version_router._fetch_latest_tag() == "v0.3.0"
 
 
 def test_fetch_latest_tag_uses_cache_within_ttl(monkeypatch):
