@@ -32,6 +32,20 @@ All notable changes to this project are documented here. Format follows
   up `db_version.py`, which needed the same fix.
 - `frontend/scripts/smoke.mjs` flagged the expected pre-login `/api/auth/me`
   401 as a failure; narrowed to actual unexpected HTTP errors.
+- The update-check cache's "never checked" sentinel (`checked_at = 0.0`,
+  compared against `time.monotonic()`) could read as "checked recently" on
+  a freshly started process, since that clock's reference point is
+  undefined and can be small right after boot -- silently reporting
+  `latest: null` for up to an hour after every container restart. Caught by
+  CI failing deterministically (young runner, small clock) while passing
+  locally every time (long-uptime dev machine); fixed by using `-inf` as
+  the sentinel instead of `0.0`.
+- `test_tampered_session_token_rejected` was genuinely flaky (~1-in-10):
+  tampering with the *last* character of a base64-encoded signature can
+  decode to identical bytes when that segment's bit-length isn't a
+  multiple of 6, since the low bits are unused padding -- some replacement
+  characters left the signature still valid. Fixed by tampering with the
+  signature's first character instead, which is always fully significant.
 
 ## [0.2.0] - 2026-09-17
 
