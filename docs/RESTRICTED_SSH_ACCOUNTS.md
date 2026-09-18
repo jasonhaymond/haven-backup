@@ -77,6 +77,59 @@ account, not just a portal-only one. Option 1 (a dedicated key) is still
 the better default; reuse an existing account only when it's already broad
 enough that this doesn't meaningfully add exposure.
 
+## Changing the restricted path later
+
+The setup command above uses `>>`, which only **appends** a line -- running
+it again with a different path doesn't replace the restriction, it leaves
+two separate `command=...` lines for the same key (confusing, and the
+second one wins depending on how you added it, which isn't something to
+rely on). To actually change which path(s) a key is restricted to, edit the
+existing line in place instead.
+
+**Edit directly with a text editor:**
+
+```bash
+sudo -u haven-backup nano /home/haven-backup/.ssh/authorized_keys
+```
+
+Find the line and change the path(s) inside `--restrict-to-path`. For more
+than one path, repeat the flag, space-separated, inside the same quoted
+`command="..."` string:
+
+```
+command="borg serve --restrict-to-path /srv/backups/haven-backup --restrict-to-path /srv/backups/another-repo",restrict ssh-ed25519 AAAA... haven-backup@portal
+```
+
+**Or script it** (handy if you're doing this repeatedly, or from a deploy
+script) with `sed`:
+
+```bash
+sudo -u haven-backup sed -i \
+  's#--restrict-to-path [^"]*#--restrict-to-path /srv/backups/new-path#' \
+  /home/haven-backup/.ssh/authorized_keys
+```
+
+Adjust the replacement pattern if you're going from one path to several.
+
+**After editing:**
+
+```bash
+sudo chmod 600 /home/haven-backup/.ssh/authorized_keys   # in case the editor reset it
+cat /home/haven-backup/.ssh/authorized_keys                # sanity-check the result
+```
+
+No service restart needed -- `sshd` re-reads `authorized_keys` on every new
+connection, so the change takes effect on the *next* SSH attempt. Haven
+Backup opens a fresh SSH connection per `borg` invocation rather than
+holding one open, so in practice the new restriction applies immediately.
+
+Re-run the verification command below before trusting the portal against
+the new path again. And if you're moving a repo to a new path, update the
+repo's `ssh://` URL on the **Repositories** page in Haven Backup to match --
+the `authorized_keys` restriction and the portal's stored URL both have to
+agree, or you'll get an authentication/permission error even though each
+half looks correct on its own.
+
 ## The append-only trap: retention needs delete rights
 
 A hardened backup-server setup often adds `--append-only` to the same

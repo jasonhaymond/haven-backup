@@ -78,7 +78,13 @@ export default function Credentials() {
           not a full-shell login) instead of <code>ssh-copy-id</code>, give Haven Backup the same treatment rather
           than a broader exception -- see{' '}
           <DocLink href={`${DOCS}/RESTRICTED_SSH_ACCOUNTS.md`}>RESTRICTED_SSH_ACCOUNTS.md</DocLink> for the exact
-          setup, and the append-only/retention tradeoff that comes with it.
+          setup, and the append-only/retention tradeoff that comes with it. Need to change which path a
+          restricted key is scoped to later? That doc's{' '}
+          <DocLink href={`${DOCS}/RESTRICTED_SSH_ACCOUNTS.md#changing-the-restricted-path-later`}>
+            "Changing the restricted path later"
+          </DocLink>{' '}
+          section covers editing <code>authorized_keys</code> in place (the earlier <code>{'>>'}</code> command only
+          appends, it won't replace an existing restriction).
         </p>
       </HelpBox>
 

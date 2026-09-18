@@ -4,6 +4,19 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.2] - 2026-09-18
+
+### Added
+- `docs/RESTRICTED_SSH_ACCOUNTS.md`: a "Changing the restricted path later"
+  section covering how to actually edit an existing restricted account's
+  `authorized_keys` entry -- the original setup command used `>>`, which
+  only appends, so re-running it with a different `--restrict-to-path`
+  leaves two conflicting `command=` lines instead of replacing the
+  restriction. Covers editing in place, a `sed` one-liner for scripting it,
+  why no service restart is needed, and that the repo's `ssh://` URL in the
+  portal has to be updated to match. Linked from the SSH Credentials page's
+  contextual help.
+
 ## [0.5.1] - 2026-09-18
 
 ### Added
