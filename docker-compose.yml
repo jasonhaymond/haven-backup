@@ -4,18 +4,40 @@ services:
     volumes:
       - haven_data:/data
     environment:
-      # HAVEN_NOTIFICATION_WEBHOOK_URL: https://ntfy.sh/your-topic
-      # HAVEN_STATUS_REFRESH_MINUTES: "30"
-      # HAVEN_PRUNE_INTERVAL_HOURS: "24"
       HAVEN_DATA_DIR: /data
+      HAVEN_NOTIFICATION_WEBHOOK_URL: ${HAVEN_NOTIFICATION_WEBHOOK_URL:-}
+      HAVEN_STATUS_REFRESH_MINUTES: ${HAVEN_STATUS_REFRESH_MINUTES:-30}
+      HAVEN_PRUNE_INTERVAL_HOURS: ${HAVEN_PRUNE_INTERVAL_HOURS:-24}
+      HAVEN_COMMAND_TIMEOUT: ${HAVEN_COMMAND_TIMEOUT:-3600}
+      HAVEN_SESSION_MAX_AGE: ${HAVEN_SESSION_MAX_AGE:-1209600}
+      # The bundled `web` container serves plain HTTP on WEB_PORT -- a real browser
+      # refuses to even store a cookie marked Secure over plain HTTP, which would
+      # silently break login. Defaults to false to match that topology; flip to
+      # true (and restart) once you've put a real TLS-terminating proxy in front
+      # of WEB_PORT -- see docs/DEPLOYMENT.md and docs/SECURITY.md.
+      HAVEN_COOKIE_SECURE: ${HAVEN_COOKIE_SECURE:-false}
+      HAVEN_LOGIN_RATE_LIMIT_ATTEMPTS: ${HAVEN_LOGIN_RATE_LIMIT_ATTEMPTS:-10}
+      HAVEN_LOGIN_RATE_LIMIT_WINDOW_SECONDS: ${HAVEN_LOGIN_RATE_LIMIT_WINDOW_SECONDS:-300}
+      HAVEN_LOG_LEVEL: ${HAVEN_LOG_LEVEL:-INFO}
+      HAVEN_BORG_SSH_EXTRA_OPTS: ${HAVEN_BORG_SSH_EXTRA_OPTS:-}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   web:
     build: ./frontend
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 volumes:

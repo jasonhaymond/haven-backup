@@ -1,12 +1,20 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import Session, select
 
-from app import config, scheduler
-from app.db import init_db
+from app import __version__, config, scheduler
+from app.db import engine, init_db
+from app.models import User
 from app.routers import auth, credentials, dashboard, hosts, repos, runs
+
+logging.basicConfig(
+    level=os.environ.get("HAVEN_LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 @asynccontextmanager
@@ -19,7 +27,7 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown()
 
 
-app = FastAPI(title="Haven Backup Portal", lifespan=lifespan)
+app = FastAPI(title="Haven Backup Portal", version=__version__, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,4 +47,13 @@ app.include_router(dashboard.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    """Unauthenticated on purpose -- external uptime monitors need to reach this
+    without credentials. Actually exercises the DB, not just "the process is up"."""
+    try:
+        with Session(engine) as session:
+            session.exec(select(User).limit(1)).first()
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    return {"status": "ok" if db_ok else "degraded", "version": __version__, "database": db_ok}

@@ -13,7 +13,17 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app import db as db_module
+from app import rate_limit
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    # The limiter's attempt counts are a module-level global (see app/rate_limit.py) --
+    # without this, an early test's login/setup calls would count against a later
+    # test's rate-limit budget, since TestClient requests all share one fake client IP.
+    rate_limit.reset()
+    yield
 
 
 @pytest.fixture
@@ -36,6 +46,10 @@ def client(test_engine):
             yield session
 
     app.dependency_overrides[db_module.get_session] = get_session_override
-    with TestClient(app) as test_client:
+    # https:// base_url: config.COOKIE_SECURE defaults to True (see app/config.py),
+    # and httpx's cookie jar -- like a real browser -- refuses to persist a Secure
+    # cookie set over plain http, which would otherwise break every test that logs
+    # in and then makes a follow-up authenticated request.
+    with TestClient(app, base_url="https://testserver") as test_client:
         yield test_client
     app.dependency_overrides.clear()

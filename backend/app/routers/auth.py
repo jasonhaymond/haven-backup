@@ -6,8 +6,11 @@ from app import config, security
 from app.db import get_session
 from app.deps import get_current_user
 from app.models import User
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_auth_rate_limit = rate_limit(config.LOGIN_RATE_LIMIT_ATTEMPTS, config.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
 
 
 class Credentials(BaseModel):
@@ -25,11 +28,11 @@ def setup_required(session: Session = Depends(get_session)):
     return {"setup_required": session.exec(select(User)).first() is None}
 
 
-@router.post("/setup", response_model=UserOut)
+@router.post("/setup", response_model=UserOut, dependencies=[_auth_rate_limit])
 def setup(creds: Credentials, response: Response, session: Session = Depends(get_session)):
     """Creates the first admin user. Only works while the User table is empty --
-    after that, use normal signup-less admin management (create more users via
-    the API once logged in) or the CLI helper in scripts/create_user.py."""
+    after that, add more admins via `backend/scripts/create_user.py` (there's no
+    signup endpoint, deliberately -- see docs/SECURITY.md)."""
     if session.exec(select(User)).first() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Setup already completed")
     if len(creds.password) < 8:
@@ -44,7 +47,7 @@ def setup(creds: Credentials, response: Response, session: Session = Depends(get
     return UserOut(id=user.id, username=user.username)
 
 
-@router.post("/login", response_model=UserOut)
+@router.post("/login", response_model=UserOut, dependencies=[_auth_rate_limit])
 def login(creds: Credentials, response: Response, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == creds.username)).first()
     if user is None or not security.verify_password(creds.password, user.password_hash):
@@ -72,5 +75,6 @@ def _set_session_cookie(response: Response, user_id: int):
         token,
         max_age=config.SESSION_MAX_AGE_SECONDS,
         httponly=True,
+        secure=config.COOKIE_SECURE,
         samesite="lax",
     )

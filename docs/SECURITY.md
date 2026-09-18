@@ -24,15 +24,32 @@ step; this is a config-management tool, not a secrets vault like Vault/age.
 
 Back up `backend/data/` (or the `haven_data` Docker volume) like you would
 any other credential store: encrypted, access-controlled, and separately
-from whatever it's protecting.
+from whatever it's protecting. See [BACKUP.md](BACKUP.md) for the actual
+(tested) commands.
 
 ## Login
 
 Single/multi-user username+password with bcrypt hashing, and a signed
 (itsdangerous), httpOnly session cookie (`backend/app/security.py`) -- no
-JWT library, no external session store. There's no rate limiting or 2FA
-built in; if you expose this beyond a trusted network, put it behind
-something that does (a reverse proxy with auth, fail2ban, a VPN/Tailscale).
+JWT library, no external session store.
+
+- **Rate limiting**: `/api/auth/login` and `/api/auth/setup` are limited to
+  `HAVEN_LOGIN_RATE_LIMIT_ATTEMPTS` (default 10) attempts per
+  `HAVEN_LOGIN_RATE_LIMIT_WINDOW_SECONDS` (default 300) per client IP, via an
+  in-process in-memory limiter (`backend/app/rate_limit.py`) -- no external
+  store needed at this scale, but it resets on restart and is per-process
+  (irrelevant here since this runs as a single backend process).
+- **No 2FA.** If you expose this beyond a trusted network, put it behind
+  something that adds it (a reverse proxy with its own auth, a VPN/Tailscale).
+- **Session cookie `Secure` flag** (`HAVEN_COOKIE_SECURE`, default `false` in
+  the bundled Docker Compose stack): a real browser refuses to even store a
+  cookie marked `Secure` over plain HTTP, which is what the bundled `web`
+  container serves by default -- so it defaults off there. Once you put a
+  real TLS-terminating reverse proxy in front (see
+  [DEPLOYMENT.md](DEPLOYMENT.md)), set this to `true` and restart. Verified
+  directly with a headless browser during development: login silently failed
+  to persist a session with this on over plain HTTP, and worked correctly
+  once off (or once real TLS was in front with it on).
 
 ## SSH host key verification
 

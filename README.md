@@ -1,5 +1,7 @@
 # Haven Backup
 
+**Current version: 0.2.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
+
 A web portal to configure and monitor **Borg** backups across your servers --
 Proxmox, Nextcloud, whatever else you run -- from one place. It doesn't do
 the backing up itself (Borg already does that well); it sits in front of your
@@ -33,8 +35,12 @@ infrastructure in two different ways.
 ```bash
 git clone https://github.com/jasonhaymond/haven-backup.git
 cd haven-backup
-docker compose up -d --build
+./scripts/setup.sh
 ```
+
+(Or skip the script and run `docker compose up -d --build` directly after
+copying `.env.example` to `.env` -- see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+for the full manual walkthrough, which ends in the same place.)
 
 Open `http://<host>:8080`, create the first admin account, then:
 1. Add an **SSH credential** for your Borg backup host.
@@ -55,7 +61,9 @@ configuration via environment variables, and reverse-proxy notes.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) -- Docker Compose and bare-metal setup, environment variables
 - [docs/BORGMATIC_INTEGRATION.md](docs/BORGMATIC_INTEGRATION.md) -- how this coexists with your existing borgmatic clients, and why the portal should own `prune`
 - [docs/BORG_COMPATIBILITY.md](docs/BORG_COMPATIBILITY.md) -- **verify this against your Borg version before trusting the dashboard numbers**
-- [docs/SECURITY.md](docs/SECURITY.md) -- what's encrypted at rest, SSH host key verification, session/login model
+- [docs/SECURITY.md](docs/SECURITY.md) -- what's encrypted at rest, SSH host key verification, session/login model, rate limiting
+- [docs/BACKUP.md](docs/BACKUP.md) -- backing up (and restoring -- tested) the portal's own database and secrets
+- [CHANGELOG.md](CHANGELOG.md) -- release history
 
 ## How it's laid out
 
@@ -70,11 +78,19 @@ backend/app/
   scheduler.py       periodic status refresh + scheduled pruning + staleness alerts
   crypto.py          encrypts SSH keys/passphrases at rest
   security.py        password hashing, signed session cookies
+  rate_limit.py       in-memory rate limiting for login/setup
   routers/           the JSON API (auth, credentials, hosts, repos, runs, dashboard)
+backend/scripts/
+  create_user.py     add an admin user after initial setup
 frontend/src/
   pages/             Dashboard, Repositories, Repo detail, Client Hosts, Credentials, Login/Setup
   context/           auth state
   lib/                fetch client, formatting, run-status polling
+frontend/scripts/
+  smoke.mjs          headless-browser sanity pass (login -> create credential/repo -> view detail)
+scripts/
+  setup.sh           interactive Docker Compose setup (writes .env, brings up the stack)
+  update.sh          deploy latest or roll back to a tagged version (code only -- see docs/BACKUP.md)
 ```
 
 ## Status
@@ -82,10 +98,22 @@ frontend/src/
 This is a personal-infrastructure tool, not a widely-audited product, and its
 Borg output parsing hasn't been validated against a live Borg installation
 (see [docs/BORG_COMPATIBILITY.md](docs/BORG_COMPATIBILITY.md) -- please check
-this against your setup). Backend logic (crypto, auth, command building,
-output parsing, service orchestration) has a pytest suite; the frontend has
-been visually verified end-to-end (login through creating a credential/repo
-and viewing its detail page) but hasn't seen a real Borg repo yet either.
+this against your setup). What *has* been exercised directly, not just
+assumed: the backend's pytest suite (37 tests: crypto, auth, rate limiting,
+command building/output parsing, service orchestration, API CRUD); the full
+Docker Compose build and a real destroy-and-restore cycle of the portal's
+own data volume ([docs/BACKUP.md](docs/BACKUP.md)); and the frontend,
+end-to-end in a real headless browser (login through creating a
+credential/repo and viewing its detail page -- `frontend/scripts/smoke.mjs`),
+which is also how a real session cookie bug (`Secure` over plain HTTP
+silently breaking login) got caught before shipping.
+
+Known, stated gaps rather than oversights: no database migration tool yet
+(schema changes need manual handling -- see [docs/BACKUP.md](docs/BACKUP.md));
+no in-app "check for updates" button (`git pull && docker compose up -d
+--build` is the documented path -- see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md));
+no frontend unit-test suite (the Playwright smoke script covers the main
+paths, not every edge case).
 
 ## License
 

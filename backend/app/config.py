@@ -17,6 +17,14 @@ SESSION_SECRET_FILE = Path(os.environ.get("HAVEN_SESSION_SECRET_FILE", str(DATA_
 SESSION_COOKIE_NAME = "haven_session"
 SESSION_MAX_AGE_SECONDS = int(os.environ.get("HAVEN_SESSION_MAX_AGE", str(60 * 60 * 24 * 14)))  # 14 days
 
+# Secure requires HTTPS between the browser and whatever terminates TLS in front of
+# this app -- true by default. Only disable for plain-http local dev (the Vite dev
+# proxy on http://localhost), never in a real deployment.
+COOKIE_SECURE = os.environ.get("HAVEN_COOKIE_SECURE", "true").lower() not in ("false", "0", "no")
+
+LOGIN_RATE_LIMIT_ATTEMPTS = int(os.environ.get("HAVEN_LOGIN_RATE_LIMIT_ATTEMPTS", "10"))
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("HAVEN_LOGIN_RATE_LIMIT_WINDOW_SECONDS", "300"))
+
 # Path to the ssh keys materialized on disk for `borg`'s BORG_RSH -- these are
 # decrypted-on-demand copies, written with 0600 perms immediately before use.
 SSH_KEY_WORKDIR = Path(os.environ.get("HAVEN_SSH_KEY_WORKDIR", str(DATA_DIR / "ssh_keys")))
