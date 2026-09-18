@@ -155,7 +155,11 @@ for this path yet -- see "Updating" below.
    users exist -- see `POST /api/auth/setup`). Add more admins later with
    `backend/scripts/create_user.py`; locked out of an existing one, use
    `backend/scripts/reset_password.py` -- see [SECURITY.md](SECURITY.md).
-2. Add an **SSH credential** for reaching your Borg backup host.
+2. Add an **SSH credential** for reaching your Borg backup host. If that
+   host already gives other apps their own locked-down account instead of
+   a shared full-shell one, see
+   [RESTRICTED_SSH_ACCOUNTS.md](RESTRICTED_SSH_ACCOUNTS.md) before creating
+   Haven Backup's -- it should get the same treatment, not an exception.
 3. Add a **repository**: its `ssh://` URL, that credential, its Borg
    passphrase, and a retention policy.
 4. Click **Refresh now** on the repo to confirm the portal can actually reach

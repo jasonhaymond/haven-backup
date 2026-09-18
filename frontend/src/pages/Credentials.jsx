@@ -72,6 +72,14 @@ export default function Credentials() {
             encrypted before being stored -- see <DocLink href={`${DOCS}/SECURITY.md`}>SECURITY.md</DocLink>.
           </li>
         </Steps>
+        <p className="mt-2">
+          If the target machine already gives other apps their own locked-down account (an{' '}
+          <code>authorized_keys</code> entry restricted to <code>command="borg serve --restrict-to-path ..."</code>,
+          not a full-shell login) instead of <code>ssh-copy-id</code>, give Haven Backup the same treatment rather
+          than a broader exception -- see{' '}
+          <DocLink href={`${DOCS}/RESTRICTED_SSH_ACCOUNTS.md`}>RESTRICTED_SSH_ACCOUNTS.md</DocLink> for the exact
+          setup, and the append-only/retention tradeoff that comes with it.
+        </p>
       </HelpBox>
 
       {showForm && (

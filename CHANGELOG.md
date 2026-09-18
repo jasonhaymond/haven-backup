@@ -4,6 +4,21 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-09-18
+
+### Added
+- `docs/RESTRICTED_SSH_ACCOUNTS.md` -- how to set Haven Backup up against a
+  backup host that already locks other apps down to their own restricted
+  SSH account (`command="borg serve --restrict-to-path ..."` in
+  `authorized_keys`, no shell) instead of a shared full-access login,
+  including the append-only-vs-retention tradeoff (an append-only account
+  can't be pruned by design, which shows up as a permission error, not a
+  bug, if you set a retention policy against one). Cross-linked from
+  `SECURITY.md`, `DEPLOYMENT.md`, `README.md`, and the SSH Credentials and
+  Repositories pages' contextual help in the UI. Requested directly rather
+  than inferred -- some of the backup server's existing accounts are
+  already locked down this way for other apps.
+
 ## [0.5.0] - 2026-09-18
 
 ### Added

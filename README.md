@@ -66,6 +66,7 @@ configuration via environment variables, and reverse-proxy notes.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) -- how monitoring, retention, and remote triggering actually reach your infrastructure
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) -- Docker Compose and bare-metal setup, environment variables
 - [docs/BORGMATIC_INTEGRATION.md](docs/BORGMATIC_INTEGRATION.md) -- how this coexists with your existing borgmatic clients, and why the portal should own `prune`
+- [docs/RESTRICTED_SSH_ACCOUNTS.md](docs/RESTRICTED_SSH_ACCOUNTS.md) -- setting Haven Backup up against a locked-down/restricted account on the backup server, if your backup host already does per-app accounts (and the append-only/retention tradeoff that comes with it)
 - [docs/BORG_COMPATIBILITY.md](docs/BORG_COMPATIBILITY.md) -- **verify this against your Borg version before trusting the dashboard numbers**
 - [docs/SECURITY.md](docs/SECURITY.md) -- what's encrypted at rest, SSH host key verification, session/login model, rate limiting
 - [docs/BACKUP.md](docs/BACKUP.md) -- backing up (and restoring -- tested) the portal's own database and secrets

@@ -95,7 +95,12 @@ explicit `./scripts/update.sh` run on the host -- see
   rejects if it later changes. Pre-populate the portal container's
   `known_hosts` yourself (mount one in, or run `ssh-keyscan` as part of image
   build/entrypoint) if you want strict verification from the very first
-  connection.
+  connection. If the backup host already locks down accounts per app
+  (`command="borg serve --restrict-to-path ..."` in `authorized_keys`
+  instead of a full-shell account), see
+  [RESTRICTED_SSH_ACCOUNTS.md](RESTRICTED_SSH_ACCOUNTS.md) for how Haven
+  Backup fits into that pattern, including the append-only-vs-retention
+  tradeoff.
 - **Client access** (`paramiko`, for "backup now"): defaults to
   `AutoAddPolicy` (trust-on-first-use). For anything internet-reachable,
   replace this with a pinned host key: pre-populate

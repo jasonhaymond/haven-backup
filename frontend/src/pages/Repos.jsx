@@ -95,6 +95,13 @@ export default function Repos() {
             matters and how to adjust a client's own borgmatic config to match.
           </li>
         </Steps>
+        <p className="mt-2">
+          If the credential above reaches a <strong>locked-down/restricted account</strong> on the backup host
+          (<code>--restrict-to-path</code>, possibly <code>--append-only</code>), retention here can fail with a
+          permission error rather than a bug -- an append-only account can't be pruned by design. See{' '}
+          <DocLink href={`${DOCS}/RESTRICTED_SSH_ACCOUNTS.md`}>RESTRICTED_SSH_ACCOUNTS.md</DocLink> before setting a
+          retention policy on a repo behind one of those accounts.
+        </p>
       </HelpBox>
 
       {showForm && (
