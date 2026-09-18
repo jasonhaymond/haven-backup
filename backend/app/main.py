@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 from app import __version__, config, scheduler
 from app.db import engine, init_db
 from app.models import User
-from app.routers import auth, credentials, dashboard, hosts, repos, runs
+from app.routers import auth, credentials, dashboard, hosts, repos, runs, version
+from app.version_stamp import stamp_current_version
 
 logging.basicConfig(
     level=os.environ.get("HAVEN_LOG_LEVEL", "INFO"),
@@ -20,6 +21,8 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    with Session(engine) as session:
+        stamp_current_version(session)
     if os.environ.get("HAVEN_DISABLE_SCHEDULER") != "1":
         scheduler.start()
     yield
@@ -43,6 +46,7 @@ app.include_router(hosts.router)
 app.include_router(repos.router)
 app.include_router(runs.router)
 app.include_router(dashboard.router)
+app.include_router(version.router)
 
 
 @app.get("/api/health")

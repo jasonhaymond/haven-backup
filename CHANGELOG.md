@@ -4,6 +4,35 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-18
+
+### Added
+- The running app version is now stamped into the database itself on every
+  startup (`AppMeta` table, `backend/app/version_stamp.py`), so a backup
+  snapshot is self-identifying instead of relying on file-modified-time
+  guessing. `scripts/update.sh` and the manual commands in `docs/BACKUP.md`
+  now label pre-update/backup snapshots by that stamped version (queried
+  from the still-running container before it's rebuilt), not the git tree.
+- `GET /api/version` and a UI hint (sidebar footer badge) showing whether a
+  newer tagged release exists, via GitHub's public tags API -- visibility
+  only, not a trigger. Opt-out via `HAVEN_UPDATE_CHECK_ENABLED=false` for
+  fully offline operation; cached for an hour to avoid hammering the API.
+  Deliberately does not attempt to trigger the actual update from the UI --
+  the container has no git checkout or Docker socket access to rebuild
+  itself, and adding a `docker.sock` passthrough just for this wasn't judged
+  worth the added attack surface on a tool that already holds SSH keys and
+  Borg passphrases (see `docs/SECURITY.md`).
+- `backend/scripts/db_version.py`, used by the above.
+
+### Fixed
+- `backend/Dockerfile` never copied `scripts/` into the image, so
+  `backend/scripts/create_user.py` -- already documented as the way to add
+  a second admin user -- would have failed with "file not found" the first
+  time anyone actually tried it in the real container. Caught while wiring
+  up `db_version.py`, which needed the same fix.
+- `frontend/scripts/smoke.mjs` flagged the expected pre-login `/api/auth/me`
+  401 as a failure; narrowed to actual unexpected HTTP errors.
+
 ## [0.2.0] - 2026-09-17
 
 ### Added

@@ -24,17 +24,30 @@ at all -- a database backup without the matching key file is not a usable
 backup, the same way a database backup without its app's `.env` secrets
 isn't either.
 
+## Version-labeled snapshots
+
+Every time the app starts, it stamps its own version into the database
+itself (a single-row `AppMeta` table -- `backend/app/version_stamp.py`).
+That's what lets a snapshot be labeled by the version that was actually
+*running against that data* at backup time, rather than guessing from a
+file's modified-time or from whatever the git tree happens to say (which can
+be ahead of what a not-yet-rebuilt container is running). `scripts/update.sh`
+already does this automatically for its pre-update snapshot; the manual
+commands below show the same technique.
+
 ## Docker Compose
 
 Take a consistent snapshot by briefly stopping the backend (SQLite doesn't
-like being tarred mid-write), then tar the volume:
+like being tarred mid-write), then tar the volume. Query the running
+container for its stamped version first, while it's still up:
 
 ```bash
+VERSION=$(docker compose exec -T backend python scripts/db_version.py)
 docker compose stop backend
 docker run --rm \
   -v haven-backup_haven_data:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine tar czf /backup/haven-data-$(date +%Y%m%d-%H%M).tar.gz -C /data .
+  alpine tar czf "/backup/haven-data-v${VERSION}-$(date +%Y%m%d-%H%M).tar.gz" -C /data .
 docker compose start backend
 ```
 
@@ -42,6 +55,12 @@ docker compose start backend
 renamed the project directory -- check with `docker volume ls`. On Windows
 with Git Bash, put the backup destination inside your project directory
 rather than `/tmp`, which isn't reliably shared into Docker Desktop's VM.)
+
+`ls backups/` then doubles as your version-labeled restore list --
+`haven-data-v0.2.0-20260917-2300.tar.gz` tells you both what it is and what
+was running when it was taken, no separate index needed for a handful of
+files. There's no admin-UI backup list for this (see "Automating this"
+below for why) -- the directory listing is the list.
 
 Ship that `.tar.gz` off this host -- object storage, another server over
 `scp`/`rsync`, whatever you already use elsewhere. A copy sitting next to the
@@ -57,7 +76,7 @@ docker compose stop backend
 docker run --rm \
   -v haven-backup_haven_data:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine sh -c "rm -rf /data/* && tar xzf /backup/haven-data-<timestamp>.tar.gz -C /data"
+  alpine sh -c "rm -rf /data/* && tar xzf /backup/haven-data-v<version>-<timestamp>.tar.gz -C /data"
 docker compose start backend
 ```
 
@@ -73,8 +92,10 @@ up -d` takes to rebuild + start, typically under a minute.
 Same idea, no Docker layer in the way:
 
 ```bash
+cd /opt/haven-backup/backend   # wherever the app's WorkingDirectory is
+VERSION=$(.venv/bin/python scripts/db_version.py)
 systemctl stop haven-backup-portal
-tar czf haven-data-$(date +%Y%m%d-%H%M).tar.gz -C /var/lib/haven-backup .
+tar czf "haven-data-v${VERSION}-$(date +%Y%m%d-%H%M).tar.gz" -C /var/lib/haven-backup .
 systemctl start haven-backup-portal
 ```
 
@@ -84,13 +105,17 @@ it again.
 
 ## Automating this
 
-There's no scheduled/one-click backup for the portal's own data yet (unlike
-the Borg repos it manages, which it prunes on its own schedule) -- run the
-commands above by hand, or put them in your own cron job / systemd timer
-pointed at wherever you ship backups to. This is a deliberate, stated gap:
-the portal's own database is small and low-churn (it only changes when you
-edit config or a scheduled job records a run), so a periodic cron entry is
-proportionate for now rather than building a dedicated feature for it.
+`scripts/update.sh` already takes a version-labeled snapshot automatically
+before every deploy/rollback (see [DEPLOYMENT.md](DEPLOYMENT.md)) -- that
+covers "before something risky happens." There's no separate
+scheduled/one-click backup for routine, nothing-changed days yet (unlike the
+Borg repos this portal manages, which it prunes on its own schedule): run
+the manual commands above by hand, or put them in your own cron job /
+systemd timer pointed at wherever you ship backups to. This is a deliberate,
+stated gap, not an oversight -- the portal's own database is small and
+low-churn (it only changes when you edit config or a scheduled job records a
+run), so a periodic cron entry is proportionate for now rather than building
+a dedicated feature for it.
 
 ## No schema migrations yet
 

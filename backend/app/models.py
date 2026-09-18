@@ -8,6 +8,16 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class AppMeta(SQLModel, table=True):
+    """Single-row table stamped with the running app version on every startup, so a
+    backup snapshot of this database is self-identifying -- see docs/BACKUP.md and
+    scripts/update.sh, which reads this (not the git tree) to label pre-update snapshots."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    version: str
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)

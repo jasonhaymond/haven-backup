@@ -70,12 +70,17 @@ VOLUME_NAME="${PROJECT_NAME}_haven_data"
 mkdir -p backups
 
 if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+  # Query the OLD (still-running, not-yet-rebuilt) container for the version actually
+  # stamped in its database -- not the git tree, which has already moved by this point.
+  RUNNING_VERSION=$(docker compose exec -T backend python scripts/db_version.py 2>/dev/null | tr -d '\r' || echo "unknown")
+  VERSION_LABEL="v${RUNNING_VERSION}"
+  [ "$RUNNING_VERSION" = "unknown" ] && VERSION_LABEL="unknown-version"
   docker compose stop backend 2>&1 || true
   MSYS2_ARG_CONV_EXCL="*" docker run --rm \
     -v "$VOLUME_NAME:/data" \
     -v "$(pwd)/backups:/backup" \
-    alpine tar czf "/backup/haven-data-pre-update-$(date +%Y%m%d-%H%M%S).tar.gz" -C /data .
-  echo "[ok] Snapshot written to backups/"
+    alpine tar czf "/backup/haven-data-${VERSION_LABEL}-$(date +%Y%m%d-%H%M%S).tar.gz" -C /data .
+  echo "[ok] Snapshot written to backups/ (labeled ${VERSION_LABEL})"
 else
   echo "[info] Volume '$VOLUME_NAME' not found (nothing running yet, or a different"
   echo "       COMPOSE_PROJECT_NAME) -- skipping snapshot. Check 'docker volume ls' if unexpected."

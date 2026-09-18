@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { api } from '../lib/api'
 
 const navItems = [
   { to: '/', label: 'Dashboard', end: true },
@@ -10,6 +12,11 @@ const navItems = [
 
 export default function Layout() {
   const { user, logout } = useAuth()
+  const [versionInfo, setVersionInfo] = useState(null)
+
+  useEffect(() => {
+    api.get('/version').then(setVersionInfo).catch(() => setVersionInfo(null))
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -43,7 +50,17 @@ export default function Layout() {
               Sign out
             </button>
           </div>
-          <div className="mt-6 px-2 text-xs text-slate-400 dark:text-slate-600">v{__APP_VERSION__}</div>
+          <div className="mt-6 px-2 text-xs text-slate-400 dark:text-slate-600">
+            v{__APP_VERSION__}
+            {versionInfo?.update_available && (
+              <span
+                className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                title={`Update available: ${versionInfo.latest}. Run scripts/update.sh on the host to deploy it.`}
+              >
+                {versionInfo.latest} available
+              </span>
+            )}
+          </div>
         </aside>
         <main className="min-w-0 flex-1 pb-16">
           <Outlet />

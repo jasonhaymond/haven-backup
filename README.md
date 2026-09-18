@@ -1,6 +1,6 @@
 # Haven Backup
 
-**Current version: 0.2.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
+**Current version: 0.3.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 A web portal to configure and monitor **Borg** backups across your servers --
 Proxmox, Nextcloud, whatever else you run -- from one place. It doesn't do
@@ -17,6 +17,8 @@ existing Borg repos and borgmatic clients to give you:
   `borgmatic create` run, from the UI.
 - **Integrity checks** (`borg check`) and full run history/logs for every
   backup, prune, and check, all from the browser.
+- **Update-available visibility** in the UI (not a trigger) -- see
+  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#updating-and-rolling-back).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the pieces fit
 together, and why monitoring/retention and "backup now" reach your
@@ -79,9 +81,11 @@ backend/app/
   crypto.py          encrypts SSH keys/passphrases at rest
   security.py        password hashing, signed session cookies
   rate_limit.py       in-memory rate limiting for login/setup
-  routers/           the JSON API (auth, credentials, hosts, repos, runs, dashboard)
+  version_stamp.py    stamps the running version into the DB on every startup
+  routers/           the JSON API (auth, credentials, hosts, repos, runs, dashboard, version)
 backend/scripts/
   create_user.py     add an admin user after initial setup
+  db_version.py      print the version stamped in the database (used by the update/backup scripts)
 frontend/src/
   pages/             Dashboard, Repositories, Repo detail, Client Hosts, Credentials, Login/Setup
   context/           auth state
@@ -99,21 +103,23 @@ This is a personal-infrastructure tool, not a widely-audited product, and its
 Borg output parsing hasn't been validated against a live Borg installation
 (see [docs/BORG_COMPATIBILITY.md](docs/BORG_COMPATIBILITY.md) -- please check
 this against your setup). What *has* been exercised directly, not just
-assumed: the backend's pytest suite (37 tests: crypto, auth, rate limiting,
-command building/output parsing, service orchestration, API CRUD); the full
-Docker Compose build and a real destroy-and-restore cycle of the portal's
-own data volume ([docs/BACKUP.md](docs/BACKUP.md)); and the frontend,
-end-to-end in a real headless browser (login through creating a
-credential/repo and viewing its detail page -- `frontend/scripts/smoke.mjs`),
-which is also how a real session cookie bug (`Secure` over plain HTTP
-silently breaking login) got caught before shipping.
+assumed: the backend's pytest suite (45 tests: crypto, auth, rate limiting,
+command building/output parsing, service orchestration, API CRUD, version
+stamping/update-check); the full Docker Compose build and a real
+destroy-and-restore cycle of the portal's own data volume
+([docs/BACKUP.md](docs/BACKUP.md)); and the frontend, end-to-end in a real
+headless browser (login through creating a credential/repo and viewing its
+detail page -- `frontend/scripts/smoke.mjs`), which is also how a real
+session cookie bug (`Secure` over plain HTTP silently breaking login) and a
+missing `COPY scripts` in the Dockerfile both got caught before shipping.
 
 Known, stated gaps rather than oversights: no database migration tool yet
 (schema changes need manual handling -- see [docs/BACKUP.md](docs/BACKUP.md));
-no in-app "check for updates" button (`git pull && docker compose up -d
---build` is the documented path -- see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md));
-no frontend unit-test suite (the Playwright smoke script covers the main
-paths, not every edge case).
+update-available is visible in the UI, but triggering the actual update from
+there isn't built -- `scripts/update.sh` on the host is the documented path
+(see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/SECURITY.md](docs/SECURITY.md)
+for why); no frontend unit-test suite (the Playwright smoke script covers
+the main paths, not every edge case).
 
 ## License
 

@@ -39,3 +39,10 @@ PRUNE_INTERVAL_HOURS = int(os.environ.get("HAVEN_PRUNE_INTERVAL_HOURS", "24"))
 NOTIFICATION_WEBHOOK_URL = os.environ.get("HAVEN_NOTIFICATION_WEBHOOK_URL")
 
 FRONTEND_ORIGIN = os.environ.get("HAVEN_FRONTEND_ORIGIN", "http://localhost:5173")
+
+# Update-available check: an outbound call to GitHub's public tags API for this repo,
+# no request body, no auth, nothing project-specific sent beyond "what tags exist" --
+# but it's still an outbound call from a tool that holds SSH keys/passphrases, so it's
+# opt-out rather than silently unconditional. Disable entirely with HAVEN_UPDATE_CHECK_ENABLED=false.
+UPDATE_CHECK_ENABLED = os.environ.get("HAVEN_UPDATE_CHECK_ENABLED", "true").lower() not in ("false", "0", "no")
+UPDATE_CHECK_REPO = os.environ.get("HAVEN_UPDATE_CHECK_REPO", "jasonhaymond/haven-backup")

@@ -23,8 +23,14 @@ mkdirSync(shotsDir, { recursive: true })
 const consoleErrors = []
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()) })
 page.on('pageerror', (err) => consoleErrors.push(String(err)))
+page.on('response', (res) => {
+  // The pre-login auth bootstrap deliberately probes /api/auth/me before a session
+  // exists and expects a 401 -- that's normal, not a failure worth flagging here.
+  if (res.status() >= 400 && !res.url().endsWith('/api/auth/me')) {
+    consoleErrors.push(`HTTP ${res.status()} ${res.url()}`)
+  }
+})
 
 async function fillByLabel(labelText, value) {
   await page.locator('label', { hasText: labelText }).first().locator('input, textarea').fill(value)

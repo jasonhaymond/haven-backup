@@ -56,7 +56,7 @@ cd haven-backup
 5. **Verify it's up**:
    ```bash
    curl http://localhost:8080/api/health
-   # {"status":"ok","version":"0.2.0","database":true}
+   # {"status":"ok","version":"0.3.0","database":true}
    ```
 
 This starts two containers:
@@ -172,10 +172,18 @@ for this path yet -- see "Updating" below.
 ```
 
 This refuses to run if there are uncommitted local changes, takes its own
-pre-restart snapshot of the portal's own data (independent of whatever
-backup schedule you've set up separately -- into `backups/`), rebuilds and
-restarts both containers, then polls `/api/health` until it responds before
-declaring success.
+pre-restart snapshot of the portal's own data -- labeled by the version
+actually stamped in the database at that moment, not the git tree (see
+[BACKUP.md](BACKUP.md)), independent of whatever backup schedule you've set
+up separately -- into `backups/`, rebuilds and restarts both containers,
+then polls `/api/health` until it responds before declaring success.
+
+The UI's sidebar shows whether a newer tagged release exists (an outbound
+check against GitHub -- see [SECURITY.md](SECURITY.md#update-available-check-outbound-call-to-github)
+for the kill switch), so you don't have to go looking for this manually --
+but it's visibility only. Nothing in the UI can trigger the actual update;
+`./scripts/update.sh` above (or its manual equivalent) is still how it
+actually happens.
 
 **Rolling back only ever rolls back code.** If the tag you're targeting
 expects a different database schema/state than what's currently running,
@@ -190,5 +198,6 @@ Every shipped version is tagged in git (`v0.2.0`, etc.) -- `git tag --list
 Prefer the manual equivalent? `git fetch --tags && git checkout <tag-or-branch>
 && docker compose up -d --build`, then take your own snapshot per
 [BACKUP.md](BACKUP.md) first if you're rolling back rather than forward.
-There's no in-app "check for updates" button yet -- this is an SSH/terminal
-step for now.
+The UI can tell you an update exists; actually running one is still an
+SSH/terminal step, deliberately -- see [SECURITY.md](SECURITY.md#update-available-check-outbound-call-to-github)
+for why.

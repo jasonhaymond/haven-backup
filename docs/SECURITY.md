@@ -51,6 +51,30 @@ JWT library, no external session store.
   to persist a session with this on over plain HTTP, and worked correctly
   once off (or once real TLS was in front with it on).
 
+## Update-available check (outbound call to GitHub)
+
+`GET /api/version` calls GitHub's public tags API
+(`api.github.com/repos/<owner>/<repo>/tags`) to show whether a newer release
+exists -- no auth, no request body, nothing project-specific sent beyond
+"what tags does this public repo have." Still opt-out rather than silently
+unconditional, because this is a tool that holds SSH keys and Borg
+passphrases and an outbound network call from it deserves a kill switch:
+set `HAVEN_UPDATE_CHECK_ENABLED=false` for fully offline operation. Result
+is cached for an hour; a failed/blocked call degrades to "no update info"
+rather than erroring.
+
+**This only shows visibility, never triggers anything.** The backend
+container is a built image with no git checkout and no Docker socket
+access -- it cannot `git pull`, rebuild, or restart itself. Giving it a
+`docker.sock` mount so a UI button *could* trigger `scripts/update.sh` on
+the host was considered and rejected: that passthrough effectively grants
+the container root on the host (anything with Docker socket access can
+launch a privileged container), which is a disproportionate attack surface
+increase for a single-operator convenience feature on a tool that already
+holds the keys to your backup infrastructure. The actual update stays an
+explicit `./scripts/update.sh` run on the host -- see
+[DEPLOYMENT.md](DEPLOYMENT.md#updating-and-rolling-back).
+
 ## SSH host key verification
 
 - **Repo access** (`borg` shelling out via `BORG_RSH`): defaults to

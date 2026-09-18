@@ -15,6 +15,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from app import db as db_module
 from app import rate_limit
 from app.main import app
+from app.routers import version as version_router
 
 
 @pytest.fixture(autouse=True)
@@ -23,6 +24,12 @@ def _reset_rate_limiter():
     # without this, an early test's login/setup calls would count against a later
     # test's rate-limit budget, since TestClient requests all share one fake client IP.
     rate_limit.reset()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_version_cache():
+    version_router.reset_cache()
     yield
 
 
