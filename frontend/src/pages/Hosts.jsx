@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { Button, Card, ErrorText, Input } from '../components/ui'
+import { Button, Card, Code, DocLink, ErrorText, Input } from '../components/ui'
+import { HelpBox, Steps } from '../components/HelpBox'
+import { DOCS } from '../lib/docs'
 import RunStatusModal from '../components/RunStatusModal'
 
 const emptyForm = { name: '', ssh_credential_id: '', borgmatic_config_path: '/etc/borgmatic/config.yaml', notes: '' }
@@ -64,6 +67,33 @@ export default function Hosts() {
         <h1 className="text-xl font-semibold">Client Hosts</h1>
         <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : 'Add host'}</Button>
       </div>
+
+      <HelpBox id="hosts" title="Setting up a client host">
+        <p>
+          A "client host" is a machine that already runs <code>borgmatic</code> locally and creates archives into a
+          repo -- Proxmox, a Nextcloud server, whatever you're backing up. Adding one here enables the{' '}
+          <strong>"Backup now"</strong> button; it's optional otherwise.
+        </p>
+        <p>Before adding one, make sure:</p>
+        <Steps>
+          <li><code>borgmatic</code> is already installed and working there, with a real config file.</li>
+          <li>
+            You have an <Link to="/credentials" className="underline">SSH credential</Link> that can log into that
+            machine.
+          </li>
+          <li>You know the exact path to its borgmatic config on that machine (default <code>/etc/borgmatic/config.yaml</code>).</li>
+        </Steps>
+        <p>
+          "Backup now" runs exactly this on the client, nothing else:
+        </p>
+        <Code>borgmatic --config &lt;path&gt; create --stats</Code>
+        <p>
+          Deliberately <code>create</code> only, never a full borgmatic run -- so it can't trigger that client's own{' '}
+          <code>prune</code> on a different schedule and fight this portal over retention. See{' '}
+          <DocLink href={`${DOCS}/BORGMATIC_INTEGRATION.md`}>BORGMATIC_INTEGRATION.md</DocLink> for how to adjust the
+          client's own config to match.
+        </p>
+      </HelpBox>
 
       {showForm && (
         <Card className="mb-4">

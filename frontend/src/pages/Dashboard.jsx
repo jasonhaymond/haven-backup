@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { formatBytes, formatRelativeTime } from '../lib/format'
 import { Badge, Card, ErrorText } from '../components/ui'
+import { HelpBox } from '../components/HelpBox'
 
 function statusFor(entry) {
   if (entry.ok === null) return { tone: 'neutral', label: 'Never checked' }
@@ -19,23 +20,30 @@ export default function Dashboard() {
     api.get('/dashboard').then(setEntries).catch((e) => setError(e.message))
   }, [])
 
-  if (error) return <ErrorText>{error}</ErrorText>
-  if (!entries) return <p className="text-sm text-slate-500">Loading...</p>
-
-  if (entries.length === 0) {
-    return (
-      <Card>
-        <p className="text-sm text-slate-500">
-          No repositories configured yet. Add an SSH credential, then a repository, under{' '}
-          <Link to="/repos" className="underline">Repositories</Link>.
-        </p>
-      </Card>
-    )
-  }
-
   return (
     <div>
       <h1 className="mb-4 text-xl font-semibold">Dashboard</h1>
+
+      <HelpBox id="dashboard" title="Reading this dashboard" defaultOpen={entries?.length === 0}>
+        <p><Badge tone="success">Healthy</Badge> -- the last status check succeeded and the newest archive is within that repo's expected interval.</p>
+        <p><Badge tone="warning">Stale</Badge> -- checked fine, but no new archive within the expected interval -- check whether the backup job that feeds this repo is actually running.</p>
+        <p><Badge tone="danger">Error</Badge> -- the last <code>borg info</code>/<code>list</code> call itself failed. Open the repo and click <strong>Refresh now</strong> to see the exact error.</p>
+        <p><Badge tone="neutral">Never checked</Badge> -- added but not refreshed yet. Open it and click <strong>Refresh now</strong> once.</p>
+      </HelpBox>
+
+      {error && <ErrorText>{error}</ErrorText>}
+      {!entries && <p className="text-sm text-slate-500">Loading...</p>}
+
+      {entries?.length === 0 && (
+        <Card>
+          <p className="text-sm text-slate-500">
+            No repositories configured yet. Add an SSH credential, then a repository, under{' '}
+            <Link to="/repos" className="underline">Repositories</Link>.
+          </p>
+        </Card>
+      )}
+
+      {entries?.length > 0 && (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {entries.map((entry) => {
           const status = statusFor(entry)
@@ -65,6 +73,7 @@ export default function Dashboard() {
           )
         })}
       </div>
+      )}
     </div>
   )
 }

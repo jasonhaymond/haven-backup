@@ -81,6 +81,15 @@ def get_prune_run(run_id: int, session: Session = Depends(get_session)):
     return run
 
 
+@router.get("/checks", response_model=list[CheckRunOut])
+def list_check_runs(repo_id: Optional[int] = None, limit: int = 50, session: Session = Depends(get_session)):
+    query = select(CheckRun)
+    if repo_id is not None:
+        query = query.where(CheckRun.repo_id == repo_id)
+    query = query.order_by(CheckRun.started_at.desc()).limit(limit)
+    return session.exec(query).all()
+
+
 @router.get("/checks/{run_id}", response_model=CheckRunOut)
 def get_check_run(run_id: int, session: Session = Depends(get_session)):
     run = session.get(CheckRun, run_id)

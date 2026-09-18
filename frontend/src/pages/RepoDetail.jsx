@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { formatBytes, formatDateTime, formatRelativeTime } from '../lib/format'
-import { Badge, Button, Card, ErrorText } from '../components/ui'
+import { Badge, Button, Card, DocLink, ErrorText } from '../components/ui'
+import { HelpBox } from '../components/HelpBox'
+import { DOCS } from '../lib/docs'
 import RunStatusModal from '../components/RunStatusModal'
 
 function statusFor(snapshot) {
@@ -18,6 +20,7 @@ export default function RepoDetail() {
   const [status, setStatus] = useState(null)
   const [backupRuns, setBackupRuns] = useState([])
   const [pruneRuns, setPruneRuns] = useState([])
+  const [checkRuns, setCheckRuns] = useState([])
   const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [activeRun, setActiveRun] = useState(null) // { kind, id }
@@ -27,6 +30,7 @@ export default function RepoDetail() {
     api.get(`/repos/${repoId}/status`).then(setStatus).catch((e) => setError(e.message))
     api.get(`/runs/backups?repo_id=${repoId}&limit=10`).then(setBackupRuns)
     api.get(`/runs/prunes?repo_id=${repoId}&limit=10`).then(setPruneRuns)
+    api.get(`/runs/checks?repo_id=${repoId}&limit=10`).then(setCheckRuns)
   }
 
   useEffect(load, [repoId])
@@ -72,6 +76,35 @@ export default function RepoDetail() {
 
       <ErrorText>{error}</ErrorText>
 
+      <HelpBox id="repo-detail" title="Status, retention, and checks">
+        <p>
+          <strong>Refresh now</strong> runs <code>borg info</code> + <code>borg list</code> right now to update the
+          numbers below -- it doesn't run automatically except on the scheduled interval
+          (<code>HAVEN_STATUS_REFRESH_MINUTES</code>).
+        </p>
+        <p>
+          <strong>Preview prune (dry run)</strong> shows what the retention policy on the right{' '}
+          <em>would</em> delete, without deleting anything. Always do this before <strong>Apply retention now</strong>,
+          which actually runs <code>borg prune</code>.
+        </p>
+        <p>
+          <strong>Run integrity check</strong> runs <code>borg check</code> in the background -- it can take a long
+          time on a large repo. Its result appears in "Recent checks" below whether you wait for the popup or come
+          back later.
+        </p>
+        <p>
+          Verify the numbers here against your actual Borg version before relying on them --{' '}
+          <DocLink href={`${DOCS}/BORG_COMPATIBILITY.md`}>BORG_COMPATIBILITY.md</DocLink> explains why and how.
+        </p>
+        <p>
+          <strong>Restoring files isn't done through this UI</strong> -- run <code>borg extract</code> or{' '}
+          <code>borg mount</code> directly against the repo URL above, using the same passphrase you entered when
+          adding it. See{' '}
+          <DocLink href="https://borgbackup.readthedocs.io/en/stable/usage/extract.html">Borg's own docs</DocLink> for
+          the exact syntax.
+        </p>
+      </HelpBox>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
@@ -113,7 +146,7 @@ export default function RepoDetail() {
         </Card>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <h2 className="mb-3 font-semibold">Recent backup runs</h2>
           <RunTable runs={backupRuns} onOpen={(id) => setActiveRun({ kind: 'backup', id })} extra={(r) => r.triggered_by} />
@@ -125,6 +158,10 @@ export default function RepoDetail() {
             onOpen={(id) => setActiveRun({ kind: 'prune', id })}
             extra={(r) => `${r.dry_run ? 'dry run' : 'applied'} · ${r.archives_deleted} deleted`}
           />
+        </Card>
+        <Card>
+          <h2 className="mb-3 font-semibold">Recent checks</h2>
+          <RunTable runs={checkRuns} onOpen={(id) => setActiveRun({ kind: 'check', id })} extra={(r) => r.triggered_by} />
         </Card>
       </div>
 

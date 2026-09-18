@@ -4,6 +4,31 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-09-18
+
+### Added
+- Contextual, per-page help: a collapsible "Show help"/"Hide help" box on
+  Dashboard, SSH Credentials, Client Hosts, Repositories, and a repo's
+  detail page, each with a real walkthrough for what that specific page
+  does -- generating and installing an SSH key, initializing a repo with
+  `borg init` before adding it here (this portal never creates repos, only
+  monitors existing ones), what "backup now" actually runs, how retention
+  and restoring work. Collapse state is remembered per browser
+  (localStorage), defaulting open. The central `/help` page is trimmed to
+  just what isn't specific to one page (updating, password reset,
+  security, doc links) instead of duplicating the above.
+- `GET /api/runs/checks` (list) and a "Recent checks" card on a repo's
+  detail page. Previously an integrity check's result only existed in the
+  popup shown right when you started it -- closing that popup or navigating
+  away lost track of it entirely, with no way to see whether it had passed
+  or failed afterward. Found this gap while writing the help text for that
+  button and realizing it described something not actually true yet.
+
+### Tests
+- `backend/tests/test_api_runs.py` -- no endpoint under `/api/runs` had any
+  test coverage before this (list/get for backups, prunes, and the new
+  checks list; auth requirement).
+
 ## [0.4.0] - 2026-09-18
 
 ### Added

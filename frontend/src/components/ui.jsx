@@ -56,6 +56,22 @@ export function Badge({ tone = 'neutral', children }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>
 }
 
+export function Code({ children }) {
+  return (
+    <pre className="overflow-x-auto rounded-md bg-slate-950 p-3 text-xs text-slate-100">
+      <code>{children}</code>
+    </pre>
+  )
+}
+
+export function DocLink({ href, children }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="underline">
+      {children}
+    </a>
+  )
+}
+
 export function ErrorText({ children }) {
   if (!children) return null
   return <p className="text-sm text-red-600 dark:text-red-400">{children}</p>

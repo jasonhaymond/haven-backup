@@ -1,7 +1,5 @@
-import { Card } from '../components/ui'
-
-const REPO = 'https://github.com/jasonhaymond/haven-backup'
-const DOCS = `${REPO}/blob/master/docs`
+import { Card, Code, DocLink } from '../components/ui'
+import { REPO, DOCS } from '../lib/docs'
 
 function Section({ title, children }) {
   return (
@@ -12,59 +10,17 @@ function Section({ title, children }) {
   )
 }
 
-function Code({ children }) {
-  return (
-    <pre className="overflow-x-auto rounded-md bg-slate-950 p-3 text-xs text-slate-100">
-      <code>{children}</code>
-    </pre>
-  )
-}
-
-function DocLink({ href, children }) {
-  return (
-    <a href={href} target="_blank" rel="noreferrer" className="text-slate-900 underline dark:text-slate-100">
-      {children}
-    </a>
-  )
-}
-
 export default function Help() {
   return (
     <div>
       <h1 className="mb-4 text-xl font-semibold">Help</h1>
 
-      <Section title="Getting started">
+      <Section title="Where to start">
         <p>
-          1. Add an <strong>SSH credential</strong> for reaching your Borg backup host. 2. Add a{' '}
-          <strong>repository</strong> (its <code>ssh://</code> URL, that credential, its passphrase, and a retention
-          policy) and click <strong>Refresh now</strong>. 3. Optionally add a <strong>client host</strong> to enable
-          "backup now" from the browser.
-        </p>
-        <p>
-          See <DocLink href={`${DOCS}/DEPLOYMENT.md`}>DEPLOYMENT.md</DocLink> and{' '}
-          <DocLink href={`${DOCS}/BORGMATIC_INTEGRATION.md`}>BORGMATIC_INTEGRATION.md</DocLink> for the full walkthrough,
-          including how retention should be split between the portal and each client's own borgmatic config.
-        </p>
-      </Section>
-
-      <Section title="Retention and pruning">
-        <p>
-          Each repo's <strong>Keep daily/weekly/monthly/yearly</strong> settings are enforced by this portal, not by
-          the clients that create archives into it -- that's deliberate, so retention isn't split across multiple
-          places disagreeing with each other. Use <strong>Preview prune (dry run)</strong> on a repo's detail page
-          before <strong>Apply retention now</strong> if you want to see what would be deleted first. It also runs on
-          its own schedule (<code>HAVEN_PRUNE_INTERVAL_HOURS</code>, default daily).
-        </p>
-      </Section>
-
-      <Section title="Restoring from a repo">
-        <p>
-          This portal monitors and prunes Borg repos, but restoring files is a <code>borg extract</code> or{' '}
-          <code>borg mount</code> operation against the repo directly -- there's no restore feature in this UI.
-          Point either command at the repo URL from that repo's detail page, using the same passphrase stored here.
-          See{' '}
-          <DocLink href="https://borgbackup.readthedocs.io/en/stable/usage/extract.html">Borg's own docs</DocLink> for
-          the exact syntax.
+          Each page has its own <strong>Show help</strong> box with a step-by-step walkthrough for what that page
+          actually does -- add an <strong>SSH credential</strong> first, then a <strong>repository</strong>, then
+          optionally a <strong>client host</strong>. This page covers everything that isn't specific to one page:
+          updating, getting locked out, and security.
         </p>
       </Section>
 

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { Button, Card, ErrorText, Input } from '../components/ui'
+import { Button, Card, Code, DocLink, ErrorText, Input } from '../components/ui'
+import { HelpBox, Steps } from '../components/HelpBox'
+import { DOCS } from '../lib/docs'
 
 const emptyForm = {
   name: '', repo_url: '', ssh_credential_id: '', client_host_id: '',
@@ -63,6 +65,37 @@ export default function Repos() {
         <h1 className="text-xl font-semibold">Repositories</h1>
         <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : 'Add repository'}</Button>
       </div>
+
+      <HelpBox id="repos" title="Adding a repository">
+        <p>
+          This portal <strong>monitors and prunes existing Borg repos -- it doesn't create new ones.</strong> Before
+          adding one here, initialize it first, from the client host or anywhere that can reach it over SSH:
+        </p>
+        <Code>borg init --encryption=repokey-blake2 ssh://user@backup-host/./path/to/repo</Code>
+        <p>Then, in the form below:</p>
+        <Steps>
+          <li><strong>Repo URL</strong> -- the exact same URL you just ran <code>borg init</code> against.</li>
+          <li>
+            <strong>SSH credential</strong> -- the one that reaches the <em>repo/backup host</em> (not necessarily the
+            client that creates archives into it) -- add it under <Link to="/credentials" className="underline">SSH Credentials</Link> first
+            if you haven't.
+          </li>
+          <li>
+            <strong>Passphrase</strong> -- the exact encryption passphrase from <code>borg init</code>. Get this wrong
+            and every operation against this repo will fail with an authentication error.
+          </li>
+          <li>
+            <strong>Created by host</strong> (optional) -- just records which client host creates archives here, for
+            the dashboard and the "backup now" button on <Link to="/hosts" className="underline">Client Hosts</Link>.
+          </li>
+          <li>
+            <strong>Retention (keep daily/weekly/monthly/yearly)</strong> -- enforced by this portal via scheduled and
+            on-demand <code>borg prune</code>, not by whatever creates the archives. See{' '}
+            <DocLink href={`${DOCS}/BORGMATIC_INTEGRATION.md`}>BORGMATIC_INTEGRATION.md</DocLink> for why that split
+            matters and how to adjust a client's own borgmatic config to match.
+          </li>
+        </Steps>
+      </HelpBox>
 
       {showForm && (
         <Card className="mb-4">

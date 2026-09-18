@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
-import { Button, Card, ErrorText, Input, Textarea } from '../components/ui'
+import { Button, Card, Code, DocLink, ErrorText, Input, Textarea } from '../components/ui'
+import { HelpBox, Steps } from '../components/HelpBox'
+import { DOCS } from '../lib/docs'
 
 const emptyForm = { name: '', hostname: '', port: 22, username: '', private_key: '', key_passphrase: '' }
 
@@ -45,6 +47,32 @@ export default function Credentials() {
         <h1 className="text-xl font-semibold">SSH Credentials</h1>
         <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : 'Add credential'}</Button>
       </div>
+
+      <HelpBox id="credentials" title="Setting up an SSH credential">
+        <p>
+          A credential is one SSH identity, reused for two different things: reaching a <strong>Borg repo host</strong>{' '}
+          (so <code>borg</code> can connect over its own SSH transport) or reaching a <strong>client host</strong> to
+          trigger <code>borgmatic create</code> there. Add one per target machine.
+        </p>
+        <Steps>
+          <li>
+            Generate a dedicated key -- don't reuse a personal one:
+            <Code>ssh-keygen -t ed25519 -f ~/.ssh/haven_&lt;name&gt; -N "" -C "haven-backup"</Code>
+          </li>
+          <li>
+            Copy the <strong>public</strong> key to the target machine's <code>authorized_keys</code>:
+            <Code>ssh-copy-id -i ~/.ssh/haven_&lt;name&gt;.pub user@target-host</Code>
+          </li>
+          <li>
+            Test it yourself once before pasting it here -- <code>ssh -i ~/.ssh/haven_&lt;name&gt; user@target-host</code> --
+            so you know it connects and the host key gets trusted in the usual way.
+          </li>
+          <li>
+            Paste the <strong>private</strong> key's contents below (the file <em>without</em> <code>.pub</code>). It's
+            encrypted before being stored -- see <DocLink href={`${DOCS}/SECURITY.md`}>SECURITY.md</DocLink>.
+          </li>
+        </Steps>
+      </HelpBox>
 
       {showForm && (
         <Card className="mb-4">
