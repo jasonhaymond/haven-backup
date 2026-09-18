@@ -8,6 +8,7 @@ import Repos from './pages/Repos'
 import RepoDetail from './pages/RepoDetail'
 import Hosts from './pages/Hosts'
 import Credentials from './pages/Credentials'
+import Help from './pages/Help'
 
 function Gate() {
   const { user, setupRequired, loading } = useAuth()
@@ -24,6 +25,7 @@ function Gate() {
         <Route path="/repos/:repoId" element={<RepoDetail />} />
         <Route path="/hosts" element={<Hosts />} />
         <Route path="/credentials" element={<Credentials />} />
+        <Route path="/help" element={<Help />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -153,7 +153,8 @@ for this path yet -- see "Updating" below.
 
 1. Open the portal, create the first admin account (only available while no
    users exist -- see `POST /api/auth/setup`). Add more admins later with
-   `backend/scripts/create_user.py`.
+   `backend/scripts/create_user.py`; locked out of an existing one, use
+   `backend/scripts/reset_password.py` -- see [SECURITY.md](SECURITY.md).
 2. Add an **SSH credential** for reaching your Borg backup host.
 3. Add a **repository**: its `ssh://` URL, that credential, its Borg
    passphrase, and a retention policy.

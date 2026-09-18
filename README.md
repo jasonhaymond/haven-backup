@@ -1,6 +1,6 @@
 # Haven Backup
 
-**Current version: 0.3.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
+**Current version: 0.4.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 A web portal to configure and monitor **Borg** backups across your servers --
 Proxmox, Nextcloud, whatever else you run -- from one place. It doesn't do
@@ -19,6 +19,8 @@ existing Borg repos and borgmatic clients to give you:
   backup, prune, and check, all from the browser.
 - **Update-available visibility** in the UI (not a trigger) -- see
   [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#updating-and-rolling-back).
+- **In-app Help page** (`/help`) covering the above plus password reset and
+  links to the full docs -- no need to go spelunking in the repo.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the pieces fit
 together, and why monitoring/retention and "backup now" reach your
@@ -85,9 +87,10 @@ backend/app/
   routers/           the JSON API (auth, credentials, hosts, repos, runs, dashboard, version)
 backend/scripts/
   create_user.py     add an admin user after initial setup
+  reset_password.py  reset an existing user's password (no self-service "forgot password" in the UI)
   db_version.py      print the version stamped in the database (used by the update/backup scripts)
 frontend/src/
-  pages/             Dashboard, Repositories, Repo detail, Client Hosts, Credentials, Login/Setup
+  pages/             Dashboard, Repositories, Repo detail, Client Hosts, Credentials, Login/Setup, Help
   context/           auth state
   lib/                fetch client, formatting, run-status polling
 frontend/scripts/
@@ -103,9 +106,9 @@ This is a personal-infrastructure tool, not a widely-audited product, and its
 Borg output parsing hasn't been validated against a live Borg installation
 (see [docs/BORG_COMPATIBILITY.md](docs/BORG_COMPATIBILITY.md) -- please check
 this against your setup). What *has* been exercised directly, not just
-assumed: the backend's pytest suite (45 tests: crypto, auth, rate limiting,
+assumed: the backend's pytest suite (53 tests: crypto, auth, rate limiting,
 command building/output parsing, service orchestration, API CRUD, version
-stamping/update-check); the full Docker Compose build and a real
+stamping/update-check, password reset/creation scripts); the full Docker Compose build and a real
 destroy-and-restore cycle of the portal's own data volume
 ([docs/BACKUP.md](docs/BACKUP.md)); and the frontend, end-to-end in a real
 headless browser (login through creating a credential/repo and viewing its
@@ -119,7 +122,10 @@ update-available is visible in the UI, but triggering the actual update from
 there isn't built -- `scripts/update.sh` on the host is the documented path
 (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/SECURITY.md](docs/SECURITY.md)
 for why); no frontend unit-test suite (the Playwright smoke script covers
-the main paths, not every edge case).
+the main paths, not every edge case); the overall layout doesn't stack on
+narrow viewports (checked on a 390px mobile screenshot while verifying the
+Help page -- sidebar and content squeeze side by side instead of stacking,
+across the whole app, not just that page). Known, not yet fixed.
 
 ## License
 

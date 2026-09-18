@@ -4,6 +4,28 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-09-18
+
+### Added
+- `backend/scripts/reset_password.py` -- resets an existing user's password
+  (interactively, or `--generate` for a one-time random password printed to
+  the terminal). There was previously no supported way to do this short of
+  hand-writing a DB update; this replaces that with a proper, tested script,
+  documented alongside `create_user.py`.
+- In-app **Help** page (`/help`, linked from the sidebar): getting started,
+  retention/pruning, restoring, updating, the password-reset commands above,
+  a security summary, and links out to the full docs on GitHub. Previously
+  this was deliberately skipped as a personal single-operator tool with no
+  other users -- added on request.
+
+### Known issue
+- The app's overall layout (sidebar + content) doesn't stack on narrow
+  viewports -- checked the new Help page on a 390px-wide mobile viewport and
+  found the whole app (not just this page) squeezes sidebar and content
+  side by side instead of stacking, making everything cramped. Pre-existing,
+  not introduced by this release; not fixed here since it wasn't in scope of
+  what was asked, but worth fixing.
+
 ## [0.3.0] - 2026-09-18
 
 ### Added

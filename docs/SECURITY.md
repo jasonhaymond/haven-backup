@@ -33,6 +33,19 @@ Single/multi-user username+password with bcrypt hashing, and a signed
 (itsdangerous), httpOnly session cookie (`backend/app/security.py`) -- no
 JWT library, no external session store.
 
+- **No self-service "forgot password."** Deliberately -- that would mean
+  accepting some unauthenticated request as proof of identity, on a tool
+  that holds SSH keys and Borg passphrases. If you're locked out, reset it
+  from the host/container instead:
+  ```
+  docker compose exec backend python scripts/reset_password.py <username>
+  docker compose exec backend python scripts/reset_password.py <username> --generate
+  ```
+  The `--generate` form prints a strong random password once -- save it
+  immediately, it cannot be shown again. See
+  `backend/scripts/reset_password.py`'s own docstring, and
+  `create_user.py` alongside it for adding a second admin instead.
+
 - **Rate limiting**: `/api/auth/login` and `/api/auth/setup` are limited to
   `HAVEN_LOGIN_RATE_LIMIT_ATTEMPTS` (default 10) attempts per
   `HAVEN_LOGIN_RATE_LIMIT_WINDOW_SECONDS` (default 300) per client IP, via an

@@ -8,6 +8,7 @@ const navItems = [
   { to: '/repos', label: 'Repositories' },
   { to: '/hosts', label: 'Client Hosts' },
   { to: '/credentials', label: 'SSH Credentials' },
+  { to: '/help', label: 'Help' },
 ]
 
 export default function Layout() {
