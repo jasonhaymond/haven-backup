@@ -19,6 +19,7 @@ backend/data/
 *.key.salt
 .env
 !.env.example
+/backups/
 
 # Misc
 _old_agent_deprecated/
