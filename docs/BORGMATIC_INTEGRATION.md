@@ -1,11 +1,23 @@
 # Integrating with existing borgmatic clients
 
+[← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
+[Deployment](DEPLOYMENT.md) ·
+[Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
+[Backup](BACKUP.md)
+
+## Contents
+- [Recommended: let the portal own prune, not each client](#portal-owns-prune)
+- [What "backup now" actually runs](#what-backup-now-runs)
+- [borgmatic version note](#borgmatic-version-note)
+
 Haven Backup assumes each client host (Proxmox, Nextcloud, etc.) already runs
 `borgmatic` via its own cron/systemd timer. The portal adds two things on top
 of that: centralized retention, and an optional "run now" trigger. It does
 not replace your client-side borgmatic config -- it works alongside it, with
 one important change recommended below.
 
+<a id="portal-owns-prune"></a>
 ## Recommended: let the portal own `prune`, not each client
 
 If a client's `borgmatic` config runs `prune` on its own schedule with its
@@ -35,6 +47,7 @@ Example client-side cron entry that only creates (no client-side prune):
 0 2 * * *  root  borgmatic --config /etc/borgmatic/config.yaml create --stats
 ```
 
+<a id="what-backup-now-runs"></a>
 ## What "backup now" actually runs
 
 `POST /api/hosts/{id}/backup-now` SSHes into the client host and runs exactly:
@@ -48,6 +61,7 @@ invokes the client's full borgmatic action list, so it can't accidentally
 trigger a client-side prune even if you haven't gotten around to trimming
 that client's config yet.
 
+<a id="borgmatic-version-note"></a>
 ## borgmatic version note
 
 `create --stats` is standard action-subcommand syntax (borgmatic >= 1.6-ish).

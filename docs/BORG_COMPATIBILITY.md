@@ -1,11 +1,25 @@
 # Borg/borgmatic version compatibility -- please verify against your setup
 
+[← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
+[Deployment](DEPLOYMENT.md) ·
+[Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
+[Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
+[Security](SECURITY.md) · [Backup](BACKUP.md)
+
+## Contents
+- [Verifying against your Borg version](#verifying)
+- [Borg 1.x vs 2.x](#borg-1x-vs-2x)
+
 This portal's parsing of `borg`'s output (`backend/app/borg_runner.py`) was
 written against Borg's documented JSON schemas and typical text output, but
 **it was not tested against a live Borg repository** while building it (the
 sandbox this was developed in couldn't build Borg's native extensions and had
-no network access to a real Borg server). Before you rely on the parsed
-numbers in the dashboard, do this once:
+no network access to a real Borg server).
+
+<a id="verifying"></a>
+## Verifying against your Borg version
+
+Before you rely on the parsed numbers in the dashboard, do this once:
 
 ```bash
 # From wherever the portal container/host can reach your repo:
@@ -13,6 +27,17 @@ BORG_PASSPHRASE=... borg info --json ssh://user@backup-host/./repo | head -c 200
 BORG_PASSPHRASE=... borg list --json ssh://user@backup-host/./repo | head -c 2000
 BORG_PASSPHRASE=... borg prune --list --stats --dry-run --keep-daily=7 ssh://user@backup-host/./repo
 ```
+
+**What success looks like:** the `info` command prints a JSON object
+containing a top-level `"cache"` key with a nested `"stats"` object (holding
+`total_size`, `total_csize`, etc.) and a top-level `"repository"` key with an
+`"archive_count"` field. The `list` command prints a JSON object with an
+`"archives"` array, each entry having `"name"` and `"time"` fields. The
+`prune --dry-run` command prints one `Would prune: <archive name>` line per
+archive it would remove (zero lines is fine if none would be). If all three
+match, the portal's parsing will work as-is -- skip straight to using it.
+If any of them look different, keep reading below for exactly which fields
+to adjust and where.
 
 Compare the shape against what `parse_info` / `parse_list` / `parse_prune` in
 `backend/app/borg_runner.py` expect:
@@ -41,6 +66,7 @@ functions -- update the key paths/regex there, covered by
 `backend/tests/test_borg_runner.py`'s fixtures (update those fixtures to match
 your version's real output while you're at it).
 
+<a id="borg-1x-vs-2x"></a>
 ## Borg 1.x vs 2.x
 
 This was written with Borg 1.2.x's CLI/output shapes in mind. Borg 2.x

@@ -1,6 +1,6 @@
 # Haven Backup
 
-**Current version: 0.5.0** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
+**Current version: 0.5.3** -- see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 A web portal to configure and monitor **Borg** backups across your servers --
 Proxmox, Nextcloud, whatever else you run -- from one place. It doesn't do

@@ -1,5 +1,18 @@
 # Architecture
 
+[← Back to README](../README.md) · [Deployment](DEPLOYMENT.md) ·
+[Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
+[Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
+[Backup](BACKUP.md)
+
+## Contents
+- [Two different remote-access paths, on purpose](#two-remote-access-paths)
+- [Why retention is centralized here, not in each client's borgmatic config](#why-centralized-retention)
+- [Data the portal stores itself](#data-the-portal-stores)
+- [Background jobs](#background-jobs)
+- [Borg version compatibility](#borg-version-compat)
+
 Haven Backup is a **control-plane portal in front of Borg** -- it does not
 itself store or encrypt backup data (Borg already does that). It exists to
 give you one place to see whether every repo is healthy, apply retention
@@ -25,6 +38,7 @@ consistently, and (optionally) kick off a backup on demand.
                                                                └──────────────┘
 ```
 
+<a id="two-remote-access-paths"></a>
 ## Two different remote-access paths, on purpose
 
 - **Repo monitoring and retention** (`borg info`, `borg list`, `borg prune`,
@@ -38,6 +52,7 @@ consistently, and (optionally) kick off a backup on demand.
   `borgmatic ... create` there (it has to run locally on the client to read
   the client's own filesystem).
 
+<a id="why-centralized-retention"></a>
 ## Why retention is centralized here, not in each client's borgmatic config
 
 If each client's own `borgmatic` config also ran `prune` on its own schedule
@@ -46,6 +61,7 @@ gets kept. So: client-side borgmatic should be configured for `create` (and
 optionally `check`) only, and the portal is the single owner of `prune` for
 every repo it manages -- see [BORGMATIC_INTEGRATION.md](BORGMATIC_INTEGRATION.md).
 
+<a id="data-the-portal-stores"></a>
 ## Data the portal stores itself
 
 A small SQLite database (`backend/app/models.py`): SSH credentials (private
@@ -54,6 +70,7 @@ rest), and run history for backups/prunes/checks. See
 [SECURITY.md](SECURITY.md) for what "encrypted at rest" does and doesn't protect
 against.
 
+<a id="background-jobs"></a>
 ## Background jobs
 
 An in-process APScheduler (`backend/app/scheduler.py`) periodically:
@@ -62,6 +79,7 @@ An in-process APScheduler (`backend/app/scheduler.py`) periodically:
    transition (was OK, now failing);
 2. runs `prune` for every repo on a fixed interval (default daily).
 
+<a id="borg-version-compat"></a>
 ## Borg version compatibility
 
 `borg info --json` / `borg list --json` parsing, and `borg prune` text-output

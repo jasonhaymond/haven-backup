@@ -1,10 +1,24 @@
 # Security model
 
+[← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
+[Deployment](DEPLOYMENT.md) · [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
+[Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Backup](BACKUP.md)
+
+## Contents
+- [What's encrypted at rest, and what that does (and doesn't) protect](#whats-encrypted)
+- [Login](#login)
+- [Update-available check (outbound call to GitHub)](#update-check)
+- [SSH host key verification](#ssh-host-key-verification)
+- [SSH keys used for client "backup now"](#ssh-keys-client-backup-now)
+- [Passphrases and private keys in transit to the running processes](#passphrases-in-transit)
+
 This portal, once configured, holds SSH private keys to your backup host and
 possibly every client host, plus every Borg repo's passphrase. Treat its data
 directory (and whoever can reach its web UI) accordingly -- this is
 effectively a master key to your entire backup estate.
 
+<a id="whats-encrypted"></a>
 ## What's encrypted at rest, and what that does (and doesn't) protect
 
 SSH private keys and Borg passphrases are encrypted with AES-256-GCM
@@ -27,6 +41,7 @@ any other credential store: encrypted, access-controlled, and separately
 from whatever it's protecting. See [BACKUP.md](BACKUP.md) for the actual
 (tested) commands.
 
+<a id="login"></a>
 ## Login
 
 Single/multi-user username+password with bcrypt hashing, and a signed
@@ -64,6 +79,7 @@ JWT library, no external session store.
   to persist a session with this on over plain HTTP, and worked correctly
   once off (or once real TLS was in front with it on).
 
+<a id="update-check"></a>
 ## Update-available check (outbound call to GitHub)
 
 `GET /api/version` calls GitHub's public tags API
@@ -88,6 +104,7 @@ holds the keys to your backup infrastructure. The actual update stays an
 explicit `./scripts/update.sh` run on the host -- see
 [DEPLOYMENT.md](DEPLOYMENT.md#updating-and-rolling-back).
 
+<a id="ssh-host-key-verification"></a>
 ## SSH host key verification
 
 - **Repo access** (`borg` shelling out via `BORG_RSH`): defaults to
@@ -108,6 +125,7 @@ explicit `./scripts/update.sh` run on the host -- see
   change `ssh_exec.py`'s `set_missing_host_key_policy` to
   `paramiko.RejectPolicy()`.
 
+<a id="ssh-keys-client-backup-now"></a>
 ## SSH keys used for client "backup now"
 
 Give each client host a dedicated key (not a personal/admin key), scoped via
@@ -116,6 +134,7 @@ what that key can run beyond `borgmatic create` -- the portal only ever
 sends that one command, but a leaked key with no `command=` restriction on
 the client could be used for anything.
 
+<a id="passphrases-in-transit"></a>
 ## Passphrases and private keys in transit to the running processes
 
 `borg`'s passphrase is passed via the `BORG_PASSPHRASE` environment variable

@@ -4,6 +4,29 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.3] - 2026-09-22
+
+### Added
+- Table of contents + a nav row (back to `README.md`, plus links to every
+  sibling doc) on every doc in `docs/` -- none of them had one before, and
+  most had grown past a single screen. Anchors added via explicit
+  `<a id="...">` tags rather than relying purely on GitHub's auto-slugger,
+  so existing cross-doc links (`SECURITY.md#ssh-keys-used-for-client-backup-now`,
+  etc.) keep working unchanged alongside the new ones.
+- Explicit "what success looks like" text after each command/step in the
+  procedural docs (`DEPLOYMENT.md`, `BACKUP.md`,
+  `RESTRICTED_SSH_ACCOUNTS.md`, `BORG_COMPATIBILITY.md`) -- e.g. what
+  `docker compose up -d --build` should print when it worked, what
+  `borg info` against a restricted account should return, how to confirm a
+  restore actually brought back the version you meant to. Previously most
+  steps only showed the command, leaving "did that actually work" to
+  inference.
+
+### Fixed
+- `README.md`'s "Current version" line had drifted to `0.5.0` across the
+  last two patch releases (`0.5.1`, `0.5.2`) -- corrected, and re-verified
+  it's part of what gets checked at each release from now on.
+
 ## [0.5.2] - 2026-09-18
 
 ### Added

@@ -1,5 +1,21 @@
 # Working with a locked-down (restricted) account on the backup server
 
+[← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
+[Deployment](DEPLOYMENT.md) · [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
+[Backup](BACKUP.md)
+
+## Contents
+- [What "locked down" usually means](#what-locked-down-means)
+- [Setting this up for Haven Backup](#setting-this-up)
+  - [Option 1: a dedicated account](#option-1-dedicated)
+  - [Option 2: reuse an existing account](#option-2-reuse)
+- [Changing the restricted path later](#changing-the-path)
+- [The append-only trap: retention needs delete rights](#append-only-trap)
+- [Verifying the restriction before pasting the key into the portal](#verifying)
+- [What Haven Backup does not need on the backup server](#what-not-needed)
+- [Client hosts ("backup now") are a separate, unrelated account](#client-hosts-separate)
+
 Many backup servers, once they host more than one thing, give each app/tenant
 its own restricted SSH account instead of one shared account with full shell
 access -- so a compromised client key can't read or delete anyone else's
@@ -7,6 +23,7 @@ data, or run arbitrary commands on the backup server itself. If your backup
 host already does this for other apps, Haven Backup should get the same
 treatment, not a shared/full-access account carved out just for convenience.
 
+<a id="what-locked-down-means"></a>
 ## What "locked down" usually means
 
 The standard Borg-recommended way to restrict an SSH key to only speak the
@@ -30,8 +47,10 @@ If another app on your backup server already has an account that looks like
 this, that's the same pattern -- Haven Backup fits into it, it doesn't need
 something different.
 
+<a id="setting-this-up"></a>
 ## Setting this up for Haven Backup
 
+<a id="option-1-dedicated"></a>
 ### Option 1: a dedicated account for Haven Backup (recommended if other apps get their own)
 
 1. On the backup server, create the account the same way you created the
@@ -42,6 +61,9 @@ something different.
    sudo chown haven-backup:haven-backup /srv/backups/haven-backup /home/haven-backup/.ssh
    sudo chmod 700 /home/haven-backup/.ssh
    ```
+   **Success looks like:** `id haven-backup` prints a valid uid/gid (account
+   exists), and `ls -ld /home/haven-backup/.ssh` shows `drwx------`
+   (`700`) owned by `haven-backup`.
 2. Generate the key **in Haven Backup**, per the walkthrough on the
    SSH Credentials page in the UI
    (`ssh-keygen -t ed25519 -f ~/.ssh/haven_<name> -N "" -C "haven-backup"`),
@@ -54,13 +76,23 @@ something different.
    EOF
    sudo chmod 600 /home/haven-backup/.ssh/authorized_keys
    ```
+   **Success looks like:** `cat /home/haven-backup/.ssh/authorized_keys`
+   shows exactly one line, starting with `command="borg serve
+   --restrict-to-path ..."` and ending with your public key -- and
+   `ls -l /home/haven-backup/.ssh/authorized_keys` shows `-rw-------`
+   (`600`).
 3. In Haven Backup's **SSH credential**, use `username: haven-backup`
    against this host with that private key.
+   **Success looks like:** the credential saves with no error banner in the
+   UI -- full end-to-end confirmation comes from the `borg info` test in
+   [Verifying the restriction](#verifying) below, not from saving the form
+   alone (the form doesn't test the connection itself).
 4. Every repo you add in Haven Backup must live under a path listed in
    `--restrict-to-path`. Need more than one directory? Repeat the flag,
    space-separated, on the same `command=` line -- don't grant a parent
    directory "to be safe"; list exactly the paths Haven Backup needs.
 
+<a id="option-2-reuse"></a>
 ### Option 2: reuse an existing per-client restricted account
 
 If the client host that creates a repo's archives already has its own
@@ -77,6 +109,7 @@ account, not just a portal-only one. Option 1 (a dedicated key) is still
 the better default; reuse an existing account only when it's already broad
 enough that this doesn't meaningfully add exposure.
 
+<a id="changing-the-path"></a>
 ## Changing the restricted path later
 
 The setup command above uses `>>`, which only **appends** a line -- running
@@ -118,6 +151,10 @@ sudo chmod 600 /home/haven-backup/.ssh/authorized_keys   # in case the editor re
 cat /home/haven-backup/.ssh/authorized_keys                # sanity-check the result
 ```
 
+**Success looks like:** the printed line shows the *new* path(s) inside
+`--restrict-to-path` and nothing else changed (same key, same `restrict`
+flag), and the file is still one line per key -- not two.
+
 No service restart needed -- `sshd` re-reads `authorized_keys` on every new
 connection, so the change takes effect on the *next* SSH attempt. Haven
 Backup opens a fresh SSH connection per `borg` invocation rather than
@@ -130,6 +167,7 @@ the `authorized_keys` restriction and the portal's stored URL both have to
 agree, or you'll get an authentication/permission error even though each
 half looks correct on its own.
 
+<a id="append-only-trap"></a>
 ## The append-only trap: retention needs delete rights
 
 A hardened backup-server setup often adds `--append-only` to the same
@@ -163,6 +201,7 @@ decide per repo, not a misconfiguration to "fix":
 Decide this up front per repo. Don't discover it by watching prune runs fail
 in the portal's run history.
 
+<a id="verifying"></a>
 ## Verifying the restriction actually works before pasting the key into the portal
 
 Test with `borg` itself, not plain `ssh` -- a restricted account behind
@@ -175,12 +214,16 @@ BORG_RSH="ssh -i ~/.ssh/haven_<name>" \
   borg info ssh://haven-backup@backup-host/./srv/backups/haven-backup/some-repo
 ```
 
-If this returns repo info, the restricted account is wired up correctly, and
-Haven Backup's own `info`/`list`/`prune`/`check` calls (which speak the same
-protocol) will work identically. If it hangs or errors, fix it here first --
-pasting an untested credential into the portal just moves the same failure
-into a run-history entry instead of your terminal.
+**What success looks like:** `borg info` prints the repository's ID,
+location, encryption mode, and cache stats (original/compressed/deduplicated
+size) -- no `Permission denied`, no `Repository ... does not exist`. That
+confirms the restricted account is wired up correctly, and Haven Backup's
+own `info`/`list`/`prune`/`check` calls (which speak the same protocol) will
+work identically. If it hangs or errors, fix it here first -- pasting an
+untested credential into the portal just moves the same failure into a
+run-history entry instead of your terminal.
 
+<a id="what-not-needed"></a>
 ## What Haven Backup does *not* need on the backup server
 
 - No shell access, ever -- `command="borg serve ..."` covers everything the
@@ -188,6 +231,7 @@ into a run-history entry instead of your terminal.
 - No sudo/root.
 - No access to paths outside `--restrict-to-path`.
 
+<a id="client-hosts-separate"></a>
 ## Client hosts ("backup now") are a separate, unrelated account
 
 Everything above is about the **backup/repo host** the portal talks to
