@@ -1,6 +1,6 @@
 # HavenBackup — Status
 
-_Last updated: 2026-09-11, by a research pass with no prior session memory of this project. Written so a brand-new Claude session can pick this up cold._
+_Last updated: 2026-09-28, at v1.0.0 (first written 2026-09-11). Written so a brand-new Claude session can pick this up cold._
 
 ## 1. Project overview
 
@@ -65,14 +65,24 @@ matters when reading the repo.
 - `models.py` — SQLModel tables: users, SSH credentials, client hosts, repos,
   run history
 - `borg_runner.py` — builds/runs `borg` commands locally (`BORG_RSH` over
-  `ssh://`), parses `borg info`/`list`/`prune` output. **This parsing is the
-  single biggest unverified area of the whole project** — see section 6.
+  `ssh://`), parses `borg info`/`list`/`prune` output. Verified against real
+  Borg 1.2/1.4 repos at v1.0.0 (see section 3); other Borg versions, 2.x in
+  particular, are still unverified.
 - `ssh_exec.py` — `paramiko`-based SSH exec into a client host to trigger
   `borgmatic`
 - `repo_service.py` — glues Repo model to `borg_runner` (refresh status,
   prune, check)
 - `host_service.py` — glues ClientHost model to `ssh_exec` (trigger a backup
   run; builds the `borgmatic --config <path> create --stats` command)
+- `enrollment.py` — one-line client enrollment: token generation/hashing,
+  ed25519 keypairs, input validation (incl. rejecting smuggled SSH keys), and
+  rendering every file the client script writes (borgmatic config in both
+  pre-1.8 sectioned and 1.8+ flat formats, systemd units, both
+  `authorized_keys` lines)
+- `static/client-install.sh` — the client install script, served
+  unauthenticated at `/api/enroll/install.sh`
+- `rate_limit.py`, `version_stamp.py`, `notifications.py` — login/claim rate
+  limiting, app-version stamping into the DB on boot, webhook notifications
 - `scheduler.py` — in-process APScheduler: periodic status refresh + fires
   webhook on health transitions, scheduled pruning on a fixed interval
 - `crypto.py` — AES-256-GCM encryption of SSH keys/passphrases at rest, using
@@ -82,227 +92,156 @@ matters when reading the repo.
   DB path, key file paths, binary paths, timeouts, refresh/prune intervals,
   webhook URL, frontend origin)
 - `routers/` — JSON API: `auth`, `credentials`, `hosts`, `repos`, `runs`,
-  `dashboard`
+  `dashboard`, `version`, `enrollments` (admin CRUD at `/api/enrollments`,
+  plus the unauthenticated `/api/enroll/install.sh` and rate-limited
+  `/api/enroll/claim`)
 
 ### Frontend module map (`frontend/src/`)
 
 - `pages/` — Dashboard, Repositories, Repo detail, Client Hosts, Credentials,
-  Login/Setup
+  Login/Setup, Help
 - `context/AuthContext.jsx` — auth state
 - `lib/` — `api.js` (fetch client), `format.js`, `usePollRun.js` (run-status
   polling)
-- `components/` — `Layout.jsx`, `RunStatusModal.jsx`, `ui.jsx`
+- `components/` — `Layout.jsx` (stacks on narrow screens), `RunStatusModal.jsx`,
+  `ui.jsx`, `HelpBox.jsx` (per-page help), `EnrollHost.jsx` (enrollment form,
+  one-time command display, enrollments list)
 
 ### Data stored by the portal itself
 
 A small SQLite DB (`backend/app/models.py`): SSH credentials (private keys
 encrypted at rest), client hosts, repos (Borg passphrases encrypted at rest),
-and run history for backups/prunes/checks. Lives in `backend/data/` (or the
+enrollments (token hash only; pending passphrase and portal key encrypted),
+run history for backups/prunes/checks, and the `AppMeta` version stamp. Lives in `backend/data/` (or the
 `haven_data` Docker named volume). Treat this directory as a master key to
 the whole backup estate — see `docs/SECURITY.md` for exactly what the AES-256-GCM
 encryption-at-rest does and doesn't protect against (it does not protect
 against anyone with access to a *running* instance's data dir + key file
 together).
 
+
 ## 3. Current status
 
-**This is a young, single-session rebuild — treat it as functional-looking
-but unverified against real infrastructure.**
+**v1.0.0, released 2026-09-28** (tagged and pushed; CI green on Python 3.10,
+3.12 and the frontend build). Every version from v0.1.0 on is tagged.
 
-What's implemented (code exists, has unit test coverage):
-- Full backend API surface: auth/setup, SSH credentials CRUD, client hosts
-  CRUD + backup-now trigger, repos CRUD + refresh/prune/check, run history,
-  dashboard aggregation.
-- AES-256-GCM crypto for secrets at rest, bcrypt + signed-cookie auth.
-- APScheduler background jobs (status refresh, scheduled prune, webhook
-  notification on health transitions).
-- Full React frontend covering the same surface (dashboard, repo detail with
-  retention controls and prune/check/run history, client hosts, credentials,
-  login/setup).
-- Backend pytest suite: `backend/tests/` — `test_api_auth.py`,
-  `test_api_crud.py`, `test_borg_runner.py`, `test_crypto_and_security.py`,
-  `test_host_service.py`, `test_repo_service.py` (per the commit message, 32
-  tests total covering crypto, auth, command building/parsing, service
-  orchestration, API CRUD). **Not re-run during this research pass** — this
-  session's Python (3.14) doesn't have `pytest` installed, so test currency
-  wasn't verified; CI (`.github/workflows/ci.yml`) runs them on Python 3.10
-  and 3.12 via GitHub Actions on push to `master` and on PRs.
-- Frontend: builds via Vite; CI runs `npm ci && npm run build`. Per the
-  README, it was "visually verified end-to-end (login through creating a
-  credential/repo and viewing its detail page)" via a headless-browser smoke
-  pass, in an environment with no interactive display.
-- Docker Compose deployment (`docker-compose.yml`): `backend` (FastAPI + borg
-  + borgmatic + openssh-client baked into the image) and `web` (built SPA
-  served by Caddy, which also reverse-proxies `/api/*`).
+What exists and has been verified:
+- Full portal: auth/setup, SSH credentials, client hosts + "Backup now",
+  repos + refresh/prune/check, run history, dashboard, update-available
+  badge, per-page help, password reset/create-user scripts, version stamped
+  into the DB on every boot.
+- **One-line client enrollment** (v1.0.0): Client Hosts → Enroll a new host
+  gives a single-use, expiring `curl … | sudo bash` command for
+  Debian/Ubuntu/Proxmox. The script installs borg + borgmatic, writes
+  `/etc/borgmatic/haven.yaml` + a systemd timer, registers host/repo/
+  credential, and gives the portal a forced-command key that can only run
+  `borgmatic create`. The one manual step is pasting the client's key line
+  on the backup server (deliberate, per the root/shared-config risk tier);
+  then the script runs `borg init` and the first backup. Guide:
+  `docs/CLIENT_ENROLLMENT.md`.
+- **One-line portal installer**: `scripts/install.sh` (clone + `setup.sh`).
+- 82 backend tests (`backend/tests/`), plus `frontend/scripts/smoke.mjs`
+  (Playwright).
 
-**What's explicitly NOT verified (the biggest open risk):**
-- **`borg_runner.py`'s output parsing has never run against a real Borg
-  installation.** It was written against Borg's documented JSON schemas /
-  typical text output, but the development sandbox had no network access and
-  couldn't build Borg's native extensions, so nothing here has touched a live
-  `borg info --json` / `borg list --json` / `borg prune` output. See
-  `docs/BORG_COMPATIBILITY.md` for exactly which fields are at risk
-  (`parse_info`'s `cache.stats` block, `parse_prune`'s `Would prune:` /
-  `Pruning archive` line-counting) and the manual verification commands to
-  run once there's a real repo to point it at. Failure mode is graceful
-  (fields come back `null`/`0`, raw output always preserved on the run
-  record) but the dashboard numbers should not be trusted until this is done.
-- Was written with Borg 1.2.x's CLI/output shapes in mind; Borg 2.x changed
-  repository format and some command syntax and would need adjustments.
-- No production deployment has happened yet as far as this repo shows — no
-  evidence of it having been pointed at the owner's actual Proxmox/Nextcloud
-  Borg backup host.
-- No rate limiting or 2FA on login; SSH host-key verification defaults to
-  trust-on-first-use for both repo access and client access (see
-  `docs/SECURITY.md` for how to harden both once this goes past a trusted
-  network).
+**Verified end to end against real Borg (2026-09-28)**, in Docker: the
+portal built from the tree (borg 1.4.0), a backup server (borg 1.2.4, sshd,
+restricted account), and real systemd clients on Debian 12 (borg 1.2.4,
+borgmatic 1.7.7, sectioned config) and Ubuntu 24.04 (borg 1.2.8, borgmatic
+1.8.3, flat config). Enrollment, the scheduled first backup, "Backup now",
+refresh, prune (dry and real), and check all worked, and both key
+restrictions held (the portal key only runs the backup; the client key only
+reaches its own repo). This found and fixed four bugs that would have hit
+any fresh build: paramiko 4+ removing `DSSKey` (broke "Backup now" and left
+runs stuck on "running"), sqlmodel rejecting naive archive datetimes (broke
+refresh), the dashboard showing borg's chunk count as the archive count, and
+the layout not working on phones.
 
-## 4. The `_old_agent_deprecated` directory
+Still not verified:
+- Against the owner's **actual** Proxmox/Nextcloud hosts and backup server.
+  No production deployment is recorded in this repo yet.
+- Borg 2.x (command syntax and repo format differ; expect changes in
+  `borg_runner.py`).
+- Non-apt Linux clients (the manual walkthrough in `CLIENT_ENROLLMENT.md`
+  covers them, but untested) and Windows (not supported, see section 6).
 
-Contains an **earlier, broken prototype** of a completely different design:
-a standalone Python backup *engine* (not a portal) — `backup_engine.py`,
-`browser_engine.py`, `restore_engine.py`, `storage_engine.py`,
-`crypto_engine.py`, `index_engine.py`, `prune_engine.py`, `health_engine.py`,
-`config_manager.py`, `update_engine.py`, `auto_update.py`, `troubleshoot.py`,
-plus a `_old_root/` subfolder with an old CLI, installer, run scripts, and
-stray test files.
+Main dependencies are unpinned (`requirements.txt` uses `>=`), so each
+fresh Docker build pulls the latest paramiko/sqlmodel/etc. That's how the
+bugs above got in unnoticed; CI catches API breaks only where tests cover
+them.
 
-This directory **was never committed to git** (confirmed via `git log --all
--- _old_agent_deprecated`, no history) and is explicitly gitignored
-(`.gitignore` has `_old_agent_deprecated/`). It matches the description in
-commit `aa92e2d`'s message of "the previous prototype" that "crashed on
-startup (RestoreEngine/BrowserEngine constructor mismatches), generated a new
-random encryption key every process restart (making backups permanently
-undecryptable), had two conflicting UpdateEngine/config implementations, and
-had no automation story."
+## 4. Old prototype directories
 
-That prototype was superseded by commit `aa92e2d` ("Rebuild Haven Backup:
-pluggable local/SFTP backends..."), which itself built a *different* design —
-a standalone encrypted/deduplicated backup engine with pluggable
-local/SFTP storage backends (this became the root-level `haven_backup/`
-package and `tests/`). **That design was then itself superseded** by the
-current Borg-control-plane-portal pivot (commit `8803576`), which is what
-`backend/`, `frontend/`, and the current `docs/` describe.
-
-**Net effect: `_old_agent_deprecated/` is two generations behind current and
-irrelevant to any future work.** It's local-disk clutter only (never in git,
-so it doesn't even show up for anyone else who clones the repo). Safe to
-delete outright; nothing in it should be referenced or revived. A new session
-should treat `backend/`, `frontend/`, and `docs/` as the only current source
-of truth.
-
-**Related clutter also found:** the root-level `haven_backup/` and `tests/`
-directories (from the *second*-generation SFTP/local-backend design, commit
-`aa92e2d`) still exist on disk but now contain **only `__pycache__`
-directories** — their actual `.py` source files were deleted in the pivot
-commit (`8803576`, confirmed via `git log --stat`: e.g. `haven_backup/backup_engine.py | 142
---`). These two directories are effectively empty (pycache only, gitignored)
-and can be deleted along with `_old_agent_deprecated/` — they are not
-current either.
+`_old_agent_deprecated/`, root `haven_backup/` and root `tests/` (leftovers
+from the two designs before the Borg-portal pivot, commit `8803576`) have
+been deleted from disk. They were never tracked in git. `backend/`,
+`frontend/`, `scripts/` and `docs/` are the whole current project.
 
 ## 5. Deployment
 
-`docker-compose.yml` at repo root defines two services:
-- `backend` — builds from `./backend` (Dockerfile bakes in `borg`,
-  `borgmatic`, `openssh-client`), mounts a `haven_data` named volume at
-  `/data`, `HAVEN_DATA_DIR=/data`. Configurable via commented-out env vars in
-  the compose file: `HAVEN_NOTIFICATION_WEBHOOK_URL`,
-  `HAVEN_STATUS_REFRESH_MINUTES`, `HAVEN_PRUNE_INTERVAL_HOURS`.
-- `web` — builds from `./frontend`, exposes `8080:80`, depends on `backend`.
-  This is Caddy serving the built SPA and reverse-proxying `/api/*` to
-  `backend` internally, so the browser only ever talks to one origin (no
-  CORS/cross-origin cookie concerns).
+Docker Compose is primary: `backend` (FastAPI + borg + borgmatic +
+openssh-client) and `web` (Caddy serving the SPA and proxying `/api/*`,
+published on `WEB_PORT`, default 8080). Three ways to get there, all
+ending in the same state:
+- `curl -fsSL https://raw.githubusercontent.com/jasonhaymond/haven-backup/master/scripts/install.sh | bash`
+  (optionally `-s -- --version v1.0.0 --dir <path>`),
+- `git clone` + `./scripts/setup.sh`,
+- the manual walkthrough in `docs/DEPLOYMENT.md` (also covers bare-metal/systemd).
 
-Quick start per README: `git clone ... && cd haven-backup && docker compose
-up -d --build`, open `http://<host>:8080`, create the first admin account
-(`POST /api/auth/setup`, only available while no users exist), add an SSH
-credential, add a repo, click "Refresh now".
+Updates/rollbacks: `./scripts/update.sh [tag]`. It snapshots the portal's
+data labeled with the DB-stamped version and health-checks after the
+restart. Code rollback only; DB rollback is manual per `docs/BACKUP.md`.
 
-Bare-metal/systemd path is documented in `docs/DEPLOYMENT.md` (needs `borg`,
-`borgmatic`, `openssh-client` on the portal host itself; a sample systemd
-unit is included there).
+Put it behind a TLS reverse proxy (Caddy by convention) before exposing it,
+and set `HAVEN_COOKIE_SECURE=true` then. Enrollment also expects an https
+portal URL: the client script refuses plain http unless given `--allow-http`.
 
-Put Haven Backup's own `web` container behind the owner's existing reverse
-proxy (Caddy per standing project convention) for TLS — it's plain HTTP
-inside the Compose network by design.
-
-**Note the GitHub repo description is stale**: `gh repo view` shows
-"Encrypted, deduplicated backups for servers and workstations, over local
-disk or SFTP" — that's the *old* (generation-2) self-contained-engine
-description, predating the Borg-portal pivot. Worth updating on GitHub if/when
-convenient; not something in the repo content itself, so it wasn't touched
-here.
+The GitHub repo description is still the old generation-2 wording
+("Encrypted, deduplicated backups … over local disk or SFTP"). It's worth
+updating on GitHub; it's not in the repo itself.
 
 ## 6. Known issues / open work
 
-- **Top priority**: validate `borg_runner.py`'s parsing against a real Borg
-  repo/installation (see section 3 and `docs/BORG_COMPATIBILITY.md` for the
-  exact commands to run and which functions to fix if shapes don't match:
-  `parse_info`, `parse_list`, `parse_prune`).
-- No evidence this has been deployed against the owner's actual
-  Proxmox/Nextcloud Borg backup host yet — first real deployment + the
-  "Refresh now" sanity check from `docs/DEPLOYMENT.md` step 4 is still
-  outstanding.
-- No TODO/FIXME/XXX comments found anywhere in `backend/app` or
-  `frontend/src` (checked via grep) — the "not yet done" list lives entirely
-  in the docs' prose (BORG_COMPATIBILITY.md, README's Status section), not in
-  code comments.
-- Delete `_old_agent_deprecated/`, root `haven_backup/`, and root `tests/`
-  (all pycache-only or fully superseded, none tracked in the current design)
-  — housekeeping, not urgent, but see section 4.
-- `gh issue list --state all` returned no results (command succeeded, empty
-  output) — no open or closed GitHub issues currently tracked for this repo.
-- Hardening noted as deliberately deferred in `docs/SECURITY.md`: no rate
-  limiting/2FA on login, SSH host-key verification is trust-on-first-use by
-  default for both repo and client access (instructions included for
-  tightening both once this is exposed beyond a trusted network).
-- `git status` at time of writing: **clean, nothing uncommitted**, on
-  `master`, up to date with `origin/master`.
+- **First real deployment** against the owner's infrastructure, then enroll
+  a real Proxmox and Nextcloud host (`docs/CLIENT_ENROLLMENT.md`).
+- **Windows clients**: deliberately deferred. Borg/borgmatic don't run
+  natively on Windows. Options (WSL2, WSL2 + VSS, a Windows-native tool)
+  are in `docs/WINDOWS_CLIENTS.md`; needs a real Windows machine to decide.
+- Consider pinning backend dependency versions (see section 3).
+- No database migration tool: new tables appear via `create_all`, but
+  changing an existing column needs manual handling (`docs/BACKUP.md`).
+- Update-available is visible in the UI, but triggering the update from the
+  UI isn't built (deliberately; `docs/SECURITY.md` explains why).
+- No 2FA; SSH host-key verification is trust-on-first-use for both repo and
+  client access (`docs/SECURITY.md` has the hardening steps).
+- CI warnings: actions target the deprecated Node 20, and `ubuntu-latest`
+  moves to Ubuntu 26 on 2026-10-19.
 
-## 7. Recent history highlights
+## 7. Recent history
 
-Full history is only 3 commits, all from 2026-09-09, and each one is a
-near-total rewrite of the last:
+- 2026-09-09: pivot to the Borg control-plane portal (`8803576`).
+- 2026-09-17 to 09-22 (v0.2.0 to v0.5.3): brought in line with the global
+  dev standards (setup/update scripts, DB version stamping, backups,
+  health endpoint, update check), password reset script, per-page help,
+  restricted-account docs, doc TOCs.
+- 2026-09-28 (v1.0.0, `ee1263f`): client enrollment, portal installer, the
+  four bug fixes found by the first live Borg test, responsive layout.
 
-1. `aa92e2d` — "Rebuild Haven Backup: pluggable local/SFTP backends, working
-   CLI, tests, docs." Fixed a broken prior prototype (the one now sitting in
-   `_old_agent_deprecated/`, never committed) and built a self-contained
-   encrypted/deduplicated backup engine (`haven_backup/` package) with
-   `LocalBackend`/`SFTPBackend` storage backends, a non-interactive CLI,
-   retention pruning + GC, systemd timer units, and a pytest suite.
-2. `ee92598` — "Fix CI trigger branch (master, not main)." One-line CI fix.
-3. `8803576` — "Pivot to a Borg control-plane portal (replaces the standalone
-   backup agent)." **Current state.** Reasoning per commit message: the owner
-   already runs a Borg-based backup server, so a custom storage engine was
-   redundant — Borg already does dedup/encryption well. Removed the entire
-   `haven_backup/` self-contained engine, its CLI, systemd units, and
-   generation-2 docs; replaced with the FastAPI+React portal described
-   throughout this file. This is the commit that produced the current
-   `backend/`, `frontend/`, `docker-compose.yml`, and `docs/*` content.
-
-No commits since the pivot — the portal design as described in section 2-3
-is the entirety of what exists past that point.
+`git log --oneline` has the full list; `CHANGELOG.md` has the detail.
 
 ## 8. Pointers
 
-- `README.md` — project pitch, stack summary, quick start, file layout map,
-  honest "Status" section (matches what's written above)
-- `docs/ARCHITECTURE.md` — the two-remote-access-paths design, why retention
-  is centralized in the portal, background jobs, Borg version compatibility
-  caveat
-- `docs/DEPLOYMENT.md` — Docker Compose (primary) and bare-metal/systemd
-  paths, full env var reference table, first-run steps
-- `docs/BORGMATIC_INTEGRATION.md` — how to configure each client's own
-  `borgmatic.yaml` so it doesn't fight the portal's `prune`, what exact
-  command "backup now" runs, a borgmatic-version caveat for older clients
-- `docs/BORG_COMPATIBILITY.md` — **read before trusting the dashboard** —
-  exact verification commands and which parser functions to patch if a Borg
-  version's output shape differs
-- `docs/SECURITY.md` — encryption-at-rest scope/limits, login model, SSH
-  host-key verification defaults and how to harden them, key materialization
-  for `borg` subprocess invocations
-- `backend/tests/` and CI (`.github/workflows/ci.yml`) — where to look for
-  current automated verification; note this session did not confirm the
-  suite still passes (no `pytest` available in this environment's Python
-  3.14) — a new session with a working `backend/.venv` should run `pytest -q
-  tests/` from `backend/` as a first sanity check before further changes
+- `README.md` — pitch, quick start, file layout, honest Status section
+- `docs/CLIENT_ENROLLMENT.md` — adding a machine: one-line command, manual
+  equivalent, troubleshooting, security model
+- `docs/DEPLOYMENT.md` — installing/updating the portal, env vars
+- `docs/ARCHITECTURE.md` — the two remote-access paths, why retention is
+  centralized
+- `docs/BORGMATIC_INTEGRATION.md` — keeping client borgmatic configs from
+  fighting the portal's prune
+- `docs/BORG_COMPATIBILITY.md` — what was verified and how to check another
+  Borg version
+- `docs/RESTRICTED_SSH_ACCOUNTS.md` — locked-down backup-server accounts
+- `docs/SECURITY.md`, `docs/BACKUP.md`, `docs/WINDOWS_CLIENTS.md`
+- Tests: `cd backend && pytest -q tests` (needs Python 3.10+; the owner's
+  Windows box has 3.14 without pytest, so this session ran them in a
+  `python:3.12-slim` container). CI: `.github/workflows/ci.yml`.
