@@ -3,7 +3,8 @@
 [← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
 [Deployment](DEPLOYMENT.md) · [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
-[Backup](BACKUP.md)
+[Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [What "locked down" usually means](#what-locked-down-means)

@@ -56,9 +56,9 @@ export function Badge({ tone = 'neutral', children }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>
 }
 
-export function Code({ children }) {
+export function Code({ children, wrap = false }) {
   return (
-    <pre className="overflow-x-auto rounded-md bg-slate-950 p-3 text-xs text-slate-100">
+    <pre className={`rounded-md bg-slate-950 p-3 text-xs text-slate-100 ${wrap ? 'whitespace-pre-wrap break-all' : 'overflow-x-auto'}`}>
       <code>{children}</code>
     </pre>
   )

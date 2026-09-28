@@ -4,7 +4,8 @@
 [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
 [Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
-[Backup](BACKUP.md)
+[Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [Two different remote-access paths, on purpose](#two-remote-access-paths)

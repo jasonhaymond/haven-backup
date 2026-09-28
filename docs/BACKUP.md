@@ -3,7 +3,8 @@
 [← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
 [Deployment](DEPLOYMENT.md) · [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
-[Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md)
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [What actually matters](#what-actually-matters)

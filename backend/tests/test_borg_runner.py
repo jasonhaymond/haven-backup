@@ -38,6 +38,7 @@ def test_parse_info_success_extracts_stats():
     assert info.ok is True
     assert info.original_size == 20_000_000_000
     assert info.compressed_size == 5_000_000_000
+    assert info.num_archives is None  # total_chunks must not be mistaken for an archive count
     assert info.deduplicated_size == 1_200_000_000
 
 

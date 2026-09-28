@@ -5,6 +5,7 @@ import { Button, Card, Code, DocLink, ErrorText, Input } from '../components/ui'
 import { HelpBox, Steps } from '../components/HelpBox'
 import { DOCS } from '../lib/docs'
 import RunStatusModal from '../components/RunStatusModal'
+import { EnrollForm, EnrollmentList } from '../components/EnrollHost'
 
 const emptyForm = { name: '', ssh_credential_id: '', borgmatic_config_path: '/etc/borgmatic/config.yaml', notes: '' }
 
@@ -14,6 +15,8 @@ export default function Hosts() {
   const [repos, setRepos] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [showForm, setShowForm] = useState(false)
+  const [showEnroll, setShowEnroll] = useState(false)
+  const [enrollments, setEnrollments] = useState([])
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [activeRun, setActiveRun] = useState(null) // { runId }
@@ -23,6 +26,7 @@ export default function Hosts() {
     api.get('/hosts').then(setHosts).catch((e) => setError(e.message))
     api.get('/credentials').then(setCredentials)
     api.get('/repos').then(setRepos)
+    api.get('/enrollments').then(setEnrollments)
   }
 
   useEffect(load, [])
@@ -63,18 +67,33 @@ export default function Hosts() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Client Hosts</h1>
-        <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : 'Add host'}</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => { setShowForm((v) => !v); setShowEnroll(false) }}>
+            {showForm ? 'Cancel' : 'Add existing host'}
+          </Button>
+          <Button onClick={() => { setShowEnroll(true); setShowForm(false) }} disabled={showEnroll}>Enroll a new host</Button>
+        </div>
       </div>
 
       <HelpBox id="hosts" title="Setting up a client host">
         <p>
-          A "client host" is a machine that already runs <code>borgmatic</code> locally and creates archives into a
-          repo -- Proxmox, a Nextcloud server, whatever you're backing up. Adding one here enables the{' '}
-          <strong>"Backup now"</strong> button; it's optional otherwise.
+          A "client host" is a machine that runs <code>borgmatic</code> locally and creates archives into a repo --
+          Proxmox, a Nextcloud server, whatever you're backing up. There are two ways to add one:
         </p>
-        <p>Before adding one, make sure:</p>
+        <p>
+          <strong>Enroll a new host</strong> (Debian/Ubuntu/Proxmox): fill in where its backups should go and what to
+          back up, and you get a one-line command to run on that machine. It installs borg + borgmatic, writes a
+          config and a daily systemd timer, registers the host and its repo here, and lets this portal's "Backup
+          now" run <code>borgmatic create</code> there -- and nothing else. You paste one line on the backup server
+          (shown here and by the script); after that it initializes the repo and runs the first backup. See{' '}
+          <DocLink href={`${DOCS}/CLIENT_ENROLLMENT.md`}>CLIENT_ENROLLMENT.md</DocLink>.
+        </p>
+        <p>
+          <strong>Add existing host</strong>: for a machine where borgmatic is already set up by hand. Before adding
+          one, make sure:
+        </p>
         <Steps>
           <li><code>borgmatic</code> is already installed and working there, with a real config file.</li>
           <li>
@@ -95,9 +114,15 @@ export default function Hosts() {
         </p>
       </HelpBox>
 
+      {showEnroll && (
+        <EnrollForm credentials={credentials} onCreated={load} onCancel={() => setShowEnroll(false)} />
+      )}
+
+      <EnrollmentList enrollments={enrollments} onChange={load} />
+
       {showForm && (
         <Card className="mb-4">
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-slate-700 dark:text-slate-300">SSH credential</span>
@@ -113,24 +138,27 @@ export default function Hosts() {
                 ))}
               </select>
             </label>
+            <div className="sm:col-span-2">
             <Input
               label="borgmatic config path"
               value={form.borgmatic_config_path}
               onChange={(e) => setForm({ ...form, borgmatic_config_path: e.target.value })}
-              className="col-span-2"
               required
             />
-            <Input label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="col-span-2" />
+            </div>
+            <div className="sm:col-span-2">
+              <Input label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
             <ErrorText>{error}</ErrorText>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Button type="submit" disabled={submitting}>{submitting ? 'Saving...' : 'Save host'}</Button>
             </div>
           </form>
         </Card>
       )}
 
-      <Card>
-        <table className="w-full text-sm">
+      <Card className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800 dark:text-slate-400">
               <th className="py-2">Name</th>

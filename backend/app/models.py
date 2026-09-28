@@ -122,3 +122,34 @@ class RepoStatusSnapshot(SQLModel, table=True):
     last_archive_time: Optional[datetime] = Field(default=None)
     ok: bool = Field(default=True)
     error: Optional[str] = Field(default=None)
+
+
+class Enrollment(SQLModel, table=True):
+    """A pending one-line client install (see docs/CLIENT_ENROLLMENT.md). Holds everything
+    the install script needs until it claims the token; claiming creates the real
+    SSHCredential/ClientHost/Repo rows. Only a hash of the token is stored."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    token_hash: str = Field(unique=True, index=True)
+    address: str  # how the portal reaches the client over SSH for "backup now"
+    ssh_port: int = Field(default=22)
+    backup_credential_id: int = Field(foreign_key="sshcredential.id")
+    repo_base_path: str
+    source_directories: str  # newline-separated absolute paths
+    schedule: str = Field(default="*-*-* 02:00:00")  # systemd OnCalendar
+    keep_daily: int = Field(default=7)
+    keep_weekly: int = Field(default=4)
+    keep_monthly: int = Field(default=6)
+    keep_yearly: int = Field(default=1)
+    expected_interval_hours: int = Field(default=26)
+    passphrase_encrypted: bytes
+    portal_private_key_encrypted: bytes
+    portal_public_key: str
+    created_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime
+    claimed_at: Optional[datetime] = Field(default=None)
+    claimed_hostname: Optional[str] = Field(default=None)
+    client_public_key: Optional[str] = Field(default=None)
+    host_id: Optional[int] = Field(default=None, foreign_key="clienthost.id")
+    repo_id: Optional[int] = Field(default=None, foreign_key="repo.id")

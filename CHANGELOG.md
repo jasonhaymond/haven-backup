@@ -4,6 +4,56 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-09-28
+
+First 1.0 release: new machines can now be set up for backup with one command,
+and the portal has been run end to end against real Borg repositories.
+
+### Added
+- **One-line client enrollment.** **Client Hosts → Enroll a new host** generates a
+  one-time install command (`curl … /api/enroll/install.sh | sudo bash -s -- --portal … --token …`)
+  for a Debian/Ubuntu/Proxmox machine. The script installs borgbackup + borgmatic,
+  creates the client's own key for the backup server, registers the host, repo and a
+  dedicated "backup now" credential with the portal, and writes
+  `/etc/borgmatic/haven.yaml` in the right format for the installed borgmatic (sectioned
+  for < 1.8, flat for 1.8+). It also adds a systemd timer and an `authorized_keys` line
+  that forces the portal's key to run only `borgmatic … create --stats`. The one manual
+  step, adding the client's key to the backup server, is printed by the script and shown
+  in the portal. After that the script creates the repo and starts the first backup. It
+  supports `--dry-run`, `--uninstall`, resuming by re-running without a token, and
+  refuses a plain-http portal unless given `--allow-http`. Tokens are single-use, stored
+  hashed, expire after `HAVEN_ENROLLMENT_TOKEN_TTL_MINUTES` (default 60), and the claim
+  endpoint is rate-limited. The client public key is strictly validated, so a claim can't
+  smuggle extra keys or options into the line pasted on the backup server. Full guide
+  and a manual walkthrough that ends in the same state: `docs/CLIENT_ENROLLMENT.md`.
+- **One-line portal installer**, `scripts/install.sh`: checks for git, Docker, the
+  Compose plugin and Docker access, clones into `~/haven-backup` (or `--dir`), optionally
+  pins a release with `--version`, and runs `setup.sh`. It installs no system packages.
+- `docs/WINDOWS_CLIENTS.md`: why Windows clients aren't supported yet and the options
+  being considered (WSL2, WSL2 + VSS, a Windows-native tool).
+- `.gitattributes` forcing LF on `*.sh`. A CRLF checkout on Windows would otherwise build
+  an image that serves a broken client script.
+
+### Fixed
+- **"Backup now" failed on any freshly built image.** paramiko 4+ removed `DSSKey`, and
+  the key loader referenced it unconditionally. The resulting `AttributeError` also
+  escaped `execute_run`, so the run stayed on "running" forever. Both are fixed: DSS is
+  only tried where paramiko still has it, and any unexpected error now marks the run
+  `failed` with the error in its log.
+- **Refresh failed on freshly built images.** Current sqlmodel refuses naive datetimes,
+  and `borg list` archive times were stored naive. They're now converted to UTC.
+- **Dashboard showed the chunk count as the number of archives.** Borg 1.x `info --json`
+  has no `archive_count`, and the parser fell back to `total_chunks`. The count now comes
+  from `borg list`. Found by running the portal against real repos for the first time;
+  see `docs/BORG_COMPATIBILITY.md`.
+- The layout now stacks on narrow screens (nav above the content) instead of squeezing
+  the sidebar and page side by side, and wide tables scroll inside their card.
+- Full-width fields in the Add host form (`col-span-2` was applied to the `<input>`
+  instead of its grid cell, so it never took effect).
+- `frontend/package-lock.json`'s version had drifted to 0.5.0.
+- The Repositories page help said the portal never creates repos; it now points new
+  machines to enrollment, which does.
+
 ## [0.5.3] - 2026-09-22
 
 ### Added

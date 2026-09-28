@@ -21,10 +21,10 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
-        <aside className="w-56 shrink-0">
-          <div className="mb-6 px-2 text-lg font-semibold tracking-tight">Haven Backup</div>
-          <nav className="flex flex-col gap-1">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 md:flex-row md:gap-6 md:py-6">
+        <aside className="shrink-0 md:w-56">
+          <div className="mb-3 px-2 text-lg font-semibold tracking-tight md:mb-6">Haven Backup</div>
+          <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -42,8 +42,8 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="mt-8 border-t border-slate-200 px-2 pt-4 text-sm dark:border-slate-800">
-            <div className="mb-2 text-slate-500 dark:text-slate-400">{user?.username}</div>
+          <div className="mt-3 flex items-center gap-3 border-t border-slate-200 px-2 pt-3 text-sm md:mt-8 md:block md:pt-4 dark:border-slate-800">
+            <div className="text-slate-500 md:mb-2 dark:text-slate-400">{user?.username}</div>
             <button
               onClick={logout}
               className="text-slate-600 underline decoration-slate-300 underline-offset-2 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
@@ -51,7 +51,7 @@ export default function Layout() {
               Sign out
             </button>
           </div>
-          <div className="mt-6 px-2 text-xs text-slate-400 dark:text-slate-600">
+          <div className="mt-2 px-2 text-xs text-slate-400 md:mt-6 dark:text-slate-600">
             v{__APP_VERSION__}
             {versionInfo?.update_available && (
               <span

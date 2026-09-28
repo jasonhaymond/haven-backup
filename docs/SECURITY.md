@@ -3,7 +3,8 @@
 [← Back to README](../README.md) · [Architecture](ARCHITECTURE.md) ·
 [Deployment](DEPLOYMENT.md) · [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
-[Borg compatibility](BORG_COMPATIBILITY.md) · [Backup](BACKUP.md)
+[Borg compatibility](BORG_COMPATIBILITY.md) · [Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [What's encrypted at rest, and what that does (and doesn't) protect](#whats-encrypted)
@@ -133,6 +134,14 @@ Give each client host a dedicated key (not a personal/admin key), scoped via
 what that key can run beyond `borgmatic create` -- the portal only ever
 sends that one command, but a leaked key with no `command=` restriction on
 the client could be used for anything.
+
+Hosts added through [client enrollment](CLIENT_ENROLLMENT.md) get this
+automatically: the portal generates a dedicated key per host, and the
+client's `authorized_keys` line forces it to run only
+`borgmatic --config /etc/borgmatic/haven.yaml create --stats`, with
+`restrict`. The token, the unauthenticated `/api/enroll/*` endpoints, and
+why the backup-server step stays manual are covered in
+[CLIENT_ENROLLMENT.md's security model](CLIENT_ENROLLMENT.md#security-model).
 
 <a id="passphrases-in-transit"></a>
 ## Passphrases and private keys in transit to the running processes

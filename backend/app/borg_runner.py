@@ -21,7 +21,7 @@ import shlex
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -153,7 +153,9 @@ def parse_info(result: CommandResult) -> RepoInfo:
         original_size=stats.get("total_size"),
         compressed_size=stats.get("total_csize"),
         deduplicated_size=stats.get("unique_csize") or stats.get("unique_size"),
-        num_archives=data.get("repository", {}).get("archive_count") or stats.get("total_chunks"),
+        # Borg 1.x `info` has no archive count at all (total_chunks is chunks, not archives) --
+        # left None so refresh_status counts them from `borg list` instead.
+        num_archives=data.get("repository", {}).get("archive_count"),
     )
 
 
@@ -178,11 +180,14 @@ class ArchiveList:
 
 
 def _parse_archive_time(raw: str) -> Optional[datetime]:
+    """Borg 1.x's --json archive times are naive local time of the machine running borg
+    (this process), so they're converted to aware UTC -- sqlmodel >= 0.0.4x refuses to
+    store naive datetimes at all."""
     if not raw:
         return None
     for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
         try:
-            return datetime.strptime(raw, fmt)
+            return datetime.strptime(raw, fmt).astimezone(timezone.utc)
         except ValueError:
             continue
     return None

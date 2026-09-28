@@ -64,6 +64,7 @@ def test_refresh_status_healthy_repo(db_session, monkeypatch):
     assert snapshot.ok is True
     assert snapshot.last_archive_name == "host1-2026-01-02T02:00:00"
     assert snapshot.deduplicated_size == 1_200_000_000
+    assert snapshot.num_archives == 2  # from `borg list`, not `borg info`'s chunk count
 
 
 def test_refresh_status_records_failure_without_raising(db_session, monkeypatch):

@@ -4,7 +4,8 @@
 [Deployment](DEPLOYMENT.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
 [Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
-[Backup](BACKUP.md)
+[Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [Recommended: let the portal own prune, not each client](#portal-owns-prune)

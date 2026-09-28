@@ -4,17 +4,27 @@
 [Deployment](DEPLOYMENT.md) ·
 [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
-[Security](SECURITY.md) · [Backup](BACKUP.md)
+[Security](SECURITY.md) · [Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
 - [Verifying against your Borg version](#verifying)
 - [Borg 1.x vs 2.x](#borg-1x-vs-2x)
 
 This portal's parsing of `borg`'s output (`backend/app/borg_runner.py`) was
-written against Borg's documented JSON schemas and typical text output, but
-**it was not tested against a live Borg repository** while building it (the
-sandbox this was developed in couldn't build Borg's native extensions and had
-no network access to a real Borg server).
+first written against Borg's documented JSON schemas without a live repo to
+test on. **As of v1.0.0 it has been exercised against real repositories**:
+the portal container's borg 1.4.0 running `info`, `list`, `prune` (dry run
+and real) and `check` against repos created by borg 1.2.4 (Debian 12) and
+1.2.8 (Ubuntu 24.04) clients, over SSH to a borg 1.2.4 backup server with
+`--restrict-to-path`/`--restrict-to-repository` accounts. That test found
+one real bug, fixed in 1.0.0: Borg 1.x's `info --json` has no
+`repository.archive_count`, and the parser used to fall back to
+`cache.stats.total_chunks`, so the dashboard showed the chunk count as the
+number of archives. The count now comes from `borg list`.
+
+Other Borg versions (in particular 2.x, and whatever your backup server
+runs) are still worth checking with the commands below.
 
 <a id="verifying"></a>
 ## Verifying against your Borg version
@@ -30,8 +40,9 @@ BORG_PASSPHRASE=... borg prune --list --stats --dry-run --keep-daily=7 ssh://use
 
 **What success looks like:** the `info` command prints a JSON object
 containing a top-level `"cache"` key with a nested `"stats"` object (holding
-`total_size`, `total_csize`, etc.) and a top-level `"repository"` key with an
-`"archive_count"` field. The `list` command prints a JSON object with an
+`total_size`, `total_csize`, etc.) and a top-level `"repository"` key. Borg
+1.x has no `"archive_count"` there; the portal counts archives from `list`
+instead. The `list` command prints a JSON object with an
 `"archives"` array, each entry having `"name"` and `"time"` fields. The
 `prune --dry-run` command prints one `Would prune: <archive name>` line per
 archive it would remove (zero lines is fine if none would be). If all three
@@ -43,7 +54,9 @@ Compare the shape against what `parse_info` / `parse_list` / `parse_prune` in
 `backend/app/borg_runner.py` expect:
 
 - `parse_info` reads `data["cache"]["stats"]["total_size" / "total_csize" /
-  "unique_csize" / "unique_size"]` and `data["repository"]["archive_count"]`.
+  "unique_csize" / "unique_size"]`, and `data["repository"]["archive_count"]`
+  only if present (it isn't in Borg 1.x -- the archive count then comes from
+  `parse_list`).
   Borg 1.2's `borg info --json` has this `cache.stats` block; if your version
   differs, the numbers on the dashboard will just come back as `null` --
   nothing crashes, but sizes won't render. The full raw JSON isn't currently

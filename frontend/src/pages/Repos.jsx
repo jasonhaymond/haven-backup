@@ -68,8 +68,10 @@ export default function Repos() {
 
       <HelpBox id="repos" title="Adding a repository">
         <p>
-          This portal <strong>monitors and prunes existing Borg repos -- it doesn't create new ones.</strong> Before
-          adding one here, initialize it first, from the client host or anywhere that can reach it over SSH:
+          Setting up a new machine? Use <Link to="/hosts" className="underline">Client Hosts → Enroll a new host</Link>{' '}
+          instead -- it creates the repo and adds it here for you. This form is for{' '}
+          <strong>existing Borg repos -- it doesn't create new ones.</strong> Before adding one here, initialize it
+          first, from the client host or anywhere that can reach it over SSH:
         </p>
         <Code>borg init --encryption=repokey-blake2 ssh://user@backup-host/./path/to/repo</Code>
         <p>Then, in the form below:</p>

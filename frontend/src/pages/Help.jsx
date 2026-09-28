@@ -24,6 +24,20 @@ export default function Help() {
         </p>
       </Section>
 
+      <Section title="Adding machines to back up">
+        <p>
+          On <strong>Client Hosts</strong>, <strong>Enroll a new host</strong> gives you a one-line command for a new
+          Debian, Ubuntu or Proxmox machine. It installs borg + borgmatic, sets up a scheduled backup, and registers
+          the host and its repo here. You paste one line on the backup server (the script and the Client Hosts page
+          both show it), then it creates the repo and runs the first backup. Each command works once and expires
+          after an hour.
+        </p>
+        <p>
+          Windows isn't supported yet (<DocLink href={`${DOCS}/WINDOWS_CLIENTS.md`}>why</DocLink>). Full steps,
+          including doing it by hand: <DocLink href={`${DOCS}/CLIENT_ENROLLMENT.md`}>CLIENT_ENROLLMENT.md</DocLink>.
+        </p>
+      </Section>
+
       <Section title="Updating the portal">
         <p>
           The sidebar shows a badge when a newer tagged release exists (checked against GitHub, cached for an hour) --
@@ -66,6 +80,7 @@ export default function Help() {
         <ul className="list-disc space-y-1 pl-5">
           <li><DocLink href={`${DOCS}/ARCHITECTURE.md`}>ARCHITECTURE.md</DocLink> -- how monitoring, retention, and remote triggering reach your infrastructure</li>
           <li><DocLink href={`${DOCS}/DEPLOYMENT.md`}>DEPLOYMENT.md</DocLink> -- setup, updating, environment variables</li>
+          <li><DocLink href={`${DOCS}/CLIENT_ENROLLMENT.md`}>CLIENT_ENROLLMENT.md</DocLink> -- adding a machine to back up with one command</li>
           <li><DocLink href={`${DOCS}/BACKUP.md`}>BACKUP.md</DocLink> -- backing up the portal's own database and secrets</li>
           <li><DocLink href={`${DOCS}/BORGMATIC_INTEGRATION.md`}>BORGMATIC_INTEGRATION.md</DocLink> -- coexisting with existing borgmatic clients</li>
           <li><DocLink href={`${DOCS}/BORG_COMPATIBILITY.md`}>BORG_COMPATIBILITY.md</DocLink> -- verify against your Borg version</li>

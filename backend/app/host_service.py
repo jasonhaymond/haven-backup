@@ -42,6 +42,10 @@ def execute_run(session: Session, run: BackupRun, host: ClientHost) -> BackupRun
     except ssh_exec.SSHExecError as e:
         run.status = "failed"
         run.output_log = f"$ {command}\n{e}"
+    except Exception as e:
+        # Runs in a background task: anything uncaught would leave the run stuck on "running".
+        run.status = "failed"
+        run.output_log = f"$ {command}\nUnexpected error: {type(e).__name__}: {e}"
 
     run.finished_at = datetime.now(timezone.utc)
     session.add(run)

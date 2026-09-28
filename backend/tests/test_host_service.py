@@ -63,3 +63,31 @@ def test_trigger_backup_ssh_failure_recorded_as_failed_run(db_session, monkeypat
     run = host_service.trigger_backup(db_session, host, repo_id=1)
     assert run.status == "failed"
     assert "connection timed out" in run.output_log
+
+
+def test_trigger_backup_unexpected_error_does_not_leave_run_stuck(db_session, monkeypatch):
+    host = _make_host(db_session)
+
+    def fake_exec(*args, **kwargs):
+        raise AttributeError("module 'paramiko' has no attribute 'DSSKey'")
+
+    monkeypatch.setattr(ssh_exec, "exec_command", fake_exec)
+
+    run = host_service.trigger_backup(db_session, host, repo_id=1)
+    assert run.status == "failed"
+    assert "DSSKey" in run.output_log
+    assert run.finished_at is not None
+
+
+def test_load_private_key_accepts_generated_ed25519_key():
+    from app.enrollment import generate_keypair
+
+    private_pem, _ = generate_keypair("test")
+    assert ssh_exec._load_private_key(private_pem).get_name() == "ssh-ed25519"
+
+
+def test_load_private_key_rejects_garbage_with_ssh_exec_error():
+    import pytest
+
+    with pytest.raises(ssh_exec.SSHExecError):
+        ssh_exec._load_private_key("not a key")

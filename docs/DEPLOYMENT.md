@@ -4,9 +4,11 @@
 [Borgmatic integration](BORGMATIC_INTEGRATION.md) ·
 [Restricted SSH accounts](RESTRICTED_SSH_ACCOUNTS.md) ·
 [Borg compatibility](BORG_COMPATIBILITY.md) · [Security](SECURITY.md) ·
-[Backup](BACKUP.md)
+[Backup](BACKUP.md) ·
+[Client enrollment](CLIENT_ENROLLMENT.md)
 
 ## Contents
+- [One-line install](#one-line-install)
 - [Docker Compose -- Option A: automated setup script](#option-a-setup-script)
 - [Docker Compose -- Option B: manual walkthrough](#option-b-manual)
   - [Put it behind your own reverse proxy / TLS](#reverse-proxy-tls)
@@ -19,6 +21,38 @@ Two ways to stand up the Docker Compose deployment (recommended) -- an
 automated setup script, or the full manual walkthrough. Both end in the same
 place: a running stack, configured the same way. A bare-metal/systemd path
 without Docker is also documented below for when that's a better fit.
+
+<a id="one-line-install"></a>
+## One-line install
+
+On a fresh host that already has Docker (with the Compose plugin) and git, as a user
+that can run `docker` without sudo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jasonhaymond/haven-backup/master/scripts/install.sh | bash
+```
+
+This is Option A below with the clone done for you. It checks for git, Docker, the
+Compose plugin and Docker access, clones the repo into `~/haven-backup`, and runs
+`scripts/setup.sh` interactively. Options go after `-s --`:
+
+```bash
+curl -fsSL .../scripts/install.sh | bash -s -- --dir /opt/haven-backup --version v1.0.0
+```
+
+- `--dir <path>`: where to clone (default `~/haven-backup`).
+- `--version <tag>`: check out that tagged release instead of the latest `master`.
+  `scripts/update.sh <tag>` moves between versions afterwards.
+
+Like `setup.sh`, it never installs system packages or touches the firewall or reverse
+proxy. If Docker or git is missing it stops and says so. If the folder already holds a
+Haven Backup checkout, it prints the update command instead of cloning again.
+
+**What success looks like:** `[ok] git, Docker and Docker Compose found`, then
+`[ok] Checked out <version>`, then `setup.sh`'s prompts (see Option A below).
+
+Once the portal is running, add machines to back up with
+[client enrollment](CLIENT_ENROLLMENT.md).
 
 <a id="option-a-setup-script"></a>
 ## Docker Compose -- Option A: automated setup script
@@ -240,8 +274,12 @@ for this path yet -- see "Updating" below.
    the SSH credential, repo URL, or passphrase (or a restricted account's
    `--restrict-to-path`) doesn't line up -- fix that before moving on rather
    than adding a client host against a repo that isn't reachable yet.
-5. Optionally add a **client host** (+ its own SSH credential) if you want
-   the "backup now" button -- see [BORGMATIC_INTEGRATION.md](BORGMATIC_INTEGRATION.md)
+5. Add machines to back up. For a new Debian/Ubuntu/Proxmox machine, use
+   **Client Hosts → Enroll a new host** ([CLIENT_ENROLLMENT.md](CLIENT_ENROLLMENT.md)):
+   one command on the machine sets up borgmatic, a timer, the repo and the
+   "backup now" access, and registers them here. For a machine where
+   borgmatic is already set up by hand, optionally add a **client host**
+   (+ its own SSH credential) if you want the "backup now" button -- see [BORGMATIC_INTEGRATION.md](BORGMATIC_INTEGRATION.md)
    first for how retention ownership should be split.
    **Success looks like:** clicking "Backup now" shows a run starting, and
    it finishes with a status of success on the host's run history rather

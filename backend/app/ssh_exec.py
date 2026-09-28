@@ -18,14 +18,17 @@ class SSHExecError(RuntimeError):
 
 
 def _load_private_key(pem: str, passphrase: str = None):
-    key_classes = (paramiko.Ed25519Key, paramiko.ECDSAKey, paramiko.RSAKey, paramiko.DSSKey)
+    # paramiko 4 dropped DSSKey entirely, so it's only tried where it still exists.
+    key_classes = [paramiko.Ed25519Key, paramiko.ECDSAKey, paramiko.RSAKey]
+    if hasattr(paramiko, "DSSKey"):
+        key_classes.append(paramiko.DSSKey)
     last_exc = None
     for key_cls in key_classes:
         try:
             return key_cls.from_private_key(io.StringIO(pem), password=passphrase or None)
         except paramiko.SSHException as e:
             last_exc = e
-    raise SSHExecError(f"Could not load private key (tried ed25519/ecdsa/rsa/dss): {last_exc}")
+    raise SSHExecError(f"Could not load private key (tried ed25519/ecdsa/rsa): {last_exc}")
 
 
 def exec_command(hostname: str, port: int, username: str, private_key_pem: str, key_passphrase: str, command: str, timeout: int = None):

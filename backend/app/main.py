@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from app import __version__, config, scheduler
 from app.db import engine, init_db
 from app.models import User
-from app.routers import auth, credentials, dashboard, hosts, repos, runs, version
+from app.routers import auth, credentials, dashboard, enrollments, hosts, repos, runs, version
 from app.version_stamp import stamp_current_version
 
 logging.basicConfig(
@@ -47,6 +47,7 @@ app.include_router(repos.router)
 app.include_router(runs.router)
 app.include_router(dashboard.router)
 app.include_router(version.router)
+app.include_router(enrollments.router)
 
 
 @app.get("/api/health")
